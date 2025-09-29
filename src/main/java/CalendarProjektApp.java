@@ -38,6 +38,12 @@ import java.util.Optional;
 import java.util.ArrayList;
 import java.nio.file.Files;
 
+/**
+ * Hauptanwendung des Projekts. Startet die JavaFX-Oberfläche, lädt Termine
+ * aus der konfigurierten Quelle (Datenbank oder ICS) und stellt Funktionen wie
+ * Import/Export, Einstellungen sowie eine Info-Anzeige bereit. Außerdem wird die
+ * Oberfläche auf Deutsch lokalisiert.
+ */
 public class CalendarProjektApp extends Application {
     private final CalendarEntryDAO dao = new CalendarEntryDAO();
     private final Calendar fxCalendar = new Calendar("Termine");

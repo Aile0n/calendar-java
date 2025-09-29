@@ -1,6 +1,11 @@
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+/**
+ * Datenmodell-Klasse für einen Kalendereintrag.
+ * Hält Titel, optionale Beschreibung sowie Start- und Endzeit.
+ * Die optionale ID wird bei Speicherung in der Datenbank vergeben.
+ */
 public class CalendarEntry {
     private Integer id;
     private String title;

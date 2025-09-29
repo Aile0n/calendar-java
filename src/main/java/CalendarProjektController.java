@@ -23,6 +23,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
+/**
+ * JavaFX-Controller für die FXML-Ansicht. Verknüpft Buttons und Kalenderansicht
+ * (CalendarFX) mit der Anwendungslogik, lädt Daten aus DB bzw. ICS und bietet
+ * Aktionen zum Anlegen, Importieren und Exportieren von Terminen sowie Einstellungen.
+ */
 public class CalendarProjektController implements Initializable {
 
     @FXML private AnchorPane calendarContainer;

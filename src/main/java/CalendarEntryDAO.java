@@ -3,6 +3,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Datenzugriffsobjekt (DAO) für Kalendereinträge in der SQLite-Datenbank.
+ * Bietet CRUD-Operationen: speichern, laden (alle), aktualisieren und löschen.
+ */
 public class CalendarEntryDAO {
     public CalendarEntry save(CalendarEntry entry) throws SQLException {
         String sql = "INSERT INTO entries (title, description, start, end) VALUES (?, ?, ?, ?)";

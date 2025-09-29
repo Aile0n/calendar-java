@@ -17,6 +17,11 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Hilfsklasse für den Import und Export von iCalendar-Dateien (ICS) mit ical4j.
+ * Bietet Methoden zum Einlesen von VEVENTs in CalendarEntry-Objekte und zum Schreiben
+ * einer Liste von CalendarEntry als .ics-Datei.
+ */
 public class IcsUtil {
 
     public static List<CalendarEntry> importIcs(Path path) throws Exception {

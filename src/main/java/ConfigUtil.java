@@ -6,6 +6,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 
+/**
+ * Zentrale Konfigurationsverwaltung für die Anwendung.
+ * Liest und schreibt Einstellungen wie Speicher-Modus (ICS/DB) und Pfade
+ * aus/zu einer Properties-Datei (config.properties).
+ */
 public class ConfigUtil {
     public enum StorageMode { ICS, DB }
 

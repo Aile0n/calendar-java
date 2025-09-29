@@ -5,6 +5,11 @@ import java.sql.Statement;
 import java.util.Properties;
 import java.io.InputStream;
 
+/**
+ * Dienstprogramm für die Datenbankanbindung (SQLite).
+ * Lädt die Verbindungskonfiguration aus config.properties, initialisiert das Schema
+ * und stellt Verbindungen für DAO-Operationen bereit.
+ */
 public class DatabaseUtil {
     private static String URL;
 
