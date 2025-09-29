@@ -9,8 +9,8 @@
                 <Button fx:id="settingsButton" text="⚙ Einstellungen" />
                 <Separator />
                 <Button fx:id="newButton" text="Neuer Termin" />
-                <Button fx:id="importButton" text="Importieren (ICS)" />
-                <Button fx:id="exportButton" text="Exportieren (ICS)" />
+                <Button fx:id="importButton" text="Importieren (ICS/VCS)" />
+                <Button fx:id="exportButton" text="Exportieren (ICS/VCS)" />
             </items>
         </ToolBar>
         <AnchorPane fx:id="calendarContainer" VBox.vgrow="ALWAYS" />

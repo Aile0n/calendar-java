@@ -189,11 +189,15 @@ public class CalendarProjektController implements Initializable {
     private void onImport(ActionEvent evt) {
         Stage stage = (Stage) calendarContainer.getScene().getWindow();
         FileChooser chooser = new FileChooser();
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("iCalendar (*.ics)", "*.ics"));
+        FileChooser.ExtensionFilter all = new FileChooser.ExtensionFilter("Kalenderdateien (*.ics, *.vcs)", "*.ics", "*.vcs");
+        FileChooser.ExtensionFilter ics = new FileChooser.ExtensionFilter("iCalendar (*.ics)", "*.ics");
+        FileChooser.ExtensionFilter vcs = new FileChooser.ExtensionFilter("vCalendar (*.vcs)", "*.vcs");
+        chooser.getExtensionFilters().addAll(all, ics, vcs);
+        chooser.setSelectedExtensionFilter(all);
         File file = chooser.showOpenDialog(stage);
         if (file == null) return;
         try {
-            List<CalendarEntry> imported = IcsUtil.importIcs(file.toPath());
+            List<CalendarEntry> imported = IcsUtil.importAuto(file.toPath());
             if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
                 for (CalendarEntry ce : imported) {
                     dao.save(ce);
@@ -212,7 +216,11 @@ public class CalendarProjektController implements Initializable {
         Stage stage = (Stage) calendarContainer.getScene().getWindow();
         FileChooser chooser = new FileChooser();
         chooser.setInitialFileName("calendar-export.ics");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("iCalendar (*.ics)", "*.ics"));
+        FileChooser.ExtensionFilter all = new FileChooser.ExtensionFilter("Kalenderdateien (*.ics, *.vcs)", "*.ics", "*.vcs");
+        FileChooser.ExtensionFilter ics = new FileChooser.ExtensionFilter("iCalendar (*.ics)", "*.ics");
+        FileChooser.ExtensionFilter vcs = new FileChooser.ExtensionFilter("vCalendar (*.vcs)", "*.vcs");
+        chooser.getExtensionFilters().addAll(all, ics, vcs);
+        chooser.setSelectedExtensionFilter(ics);
         File file = chooser.showSaveDialog(stage);
         if (file == null) return;
         try {
@@ -222,7 +230,21 @@ public class CalendarProjektController implements Initializable {
             } else {
                 items = new ArrayList<>(currentEntries);
             }
-            IcsUtil.exportIcs(file.toPath(), items);
+            java.nio.file.Path out = file.toPath();
+            String lower = file.getName().toLowerCase();
+            if (!lower.endsWith(".ics") && !lower.endsWith(".vcs")) {
+                var sel = chooser.getSelectedExtensionFilter();
+                if (sel != null && sel.getExtensions().contains("*.vcs")) {
+                    out = out.resolveSibling(file.getName() + ".vcs");
+                } else {
+                    out = out.resolveSibling(file.getName() + ".ics");
+                }
+            }
+            if (out.toString().toLowerCase().endsWith(".vcs")) {
+                IcsUtil.exportVcs(out, items);
+            } else {
+                IcsUtil.exportIcs(out, items);
+            }
         } catch (Exception ex) {
             showError("Export fehlgeschlagen", ex);
         }
