@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
+<VBox xmlns="http://javafx.com/javafx/22.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="CalendarProjektController">
+    <children>
+        <ToolBar fx:id="toolBar">
+            <items>
+                <Button fx:id="settingsButton" text="⚙ Einstellungen" />
+                <Separator />
+                <Button fx:id="newButton" text="Neuer Termin" />
+                <Button fx:id="importButton" text="Importieren (ICS)" />
+                <Button fx:id="exportButton" text="Exportieren (ICS)" />
+            </items>
+        </ToolBar>
+        <AnchorPane fx:id="calendarContainer" VBox.vgrow="ALWAYS" />
+    </children>
+    <padding>
+        <Insets top="6" right="6" bottom="6" left="6" />
+    </padding>
+</VBox>

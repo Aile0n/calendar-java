@@ -1,29 +1,62 @@
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 public class CalendarEntry {
-    private int id;
+    private Integer id;
     private String title;
     private String description;
     private LocalDateTime start;
     private LocalDateTime end;
 
-    // Constructors
+    public CalendarEntry() {}
 
-    public String getTitle() {
-        return title;
+    public CalendarEntry(Integer id, String title, String description, LocalDateTime start, LocalDateTime end) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.start = start;
+        this.end = end;
     }
 
-    public String getDescription() {
-        return description;
+    public CalendarEntry(String title, String description, LocalDateTime start, LocalDateTime end) {
+        this(null, title, description, start, end);
     }
 
-    public LocalDateTime getStart() {
-        return start;
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public LocalDateTime getStart() { return start; }
+    public void setStart(LocalDateTime start) { this.start = start; }
+
+    public LocalDateTime getEnd() { return end; }
+    public void setEnd(LocalDateTime end) { this.end = end; }
+
+    @Override
+    public String toString() {
+        return "CalendarEntry{" +
+                "id=" + id +
+                ", title='" + title + '\'' +
+                ", start=" + start +
+                ", end=" + end +
+                '}';
     }
 
-    public LocalDateTime getEnd() {
-        return end;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CalendarEntry that = (CalendarEntry) o;
+        return Objects.equals(id, that.id);
     }
 
-    // Setters and other methods if needed
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
 }
