@@ -61,33 +61,37 @@ public final class ConfigUtil {
 
     private static void ensureDefaults() {
         String rawPath = props.getProperty(KEY_ICS_PATH);
-        Path calendarPath;
         if (rawPath == null || rawPath.isBlank()) {
-            calendarPath = locateInitialCalendar();
+            Path calendarPath = locateInitialCalendar();
             props.setProperty(KEY_ICS_PATH, calendarPath.toString());
         } else {
-            calendarPath = Paths.get(rawPath.trim()).toAbsolutePath().normalize();
+            Path calendarPath = Paths.get(rawPath.trim()).toAbsolutePath().normalize();
             props.setProperty(KEY_ICS_PATH, calendarPath.toString());
         }
 
         if (props.getProperty(KEY_DARK_MODE) == null) {
             props.setProperty(KEY_DARK_MODE, "false");
         }
-
-        ensureCalendarFileExists(calendarPath);
     }
 
     private static Path locateInitialCalendar() {
-        Path base = determineApplicationDirectory();
-        Path candidate = base.resolve("calendar.ics");
-        if (Files.exists(candidate)) {
-            return candidate.toAbsolutePath().normalize();
-        }
         Path workingDirCandidate = Paths.get("calendar.ics").toAbsolutePath().normalize();
-        if (Files.exists(workingDirCandidate)) {
+        if (Files.exists(workingDirCandidate) || isWritableLocation(workingDirCandidate)) {
             return workingDirCandidate;
         }
-        return candidate.toAbsolutePath().normalize();
+
+        Path homeCandidate = determineUserHomeCalendar();
+        if (Files.exists(homeCandidate) || isWritableLocation(homeCandidate)) {
+            return homeCandidate;
+        }
+
+        Path appCandidate = determineApplicationDirectory().resolve("calendar.ics").toAbsolutePath().normalize();
+        if (Files.exists(appCandidate)) {
+            return appCandidate;
+        }
+
+        // Fall back to working directory even if we cannot determine writability.
+        return workingDirCandidate;
     }
 
     private static Path determineApplicationDirectory() {
@@ -106,6 +110,36 @@ public final class ConfigUtil {
         } catch (Exception ignored) {
         }
         return Paths.get("").toAbsolutePath();
+    }
+
+    private static Path determineUserHomeCalendar() {
+        String userHome = System.getProperty("user.home");
+        if (userHome != null && !userHome.isBlank()) {
+            return Paths.get(userHome).resolve("calendar.ics").toAbsolutePath().normalize();
+        }
+        return Paths.get("calendar.ics").toAbsolutePath().normalize();
+    }
+
+    private static boolean isWritableLocation(Path target) {
+        try {
+            Path parent = target.getParent();
+            if (parent == null) {
+                parent = Paths.get("").toAbsolutePath();
+            }
+            Path probe = parent;
+            while (probe != null && !Files.exists(probe)) {
+                probe = probe.getParent();
+            }
+            if (probe == null) {
+                probe = Paths.get("").toAbsolutePath();
+            }
+            if (Files.exists(target)) {
+                return Files.isWritable(target);
+            }
+            return Files.isWritable(probe);
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private static void ensureCalendarFileExists(Path calendarPath) {
@@ -142,8 +176,39 @@ public final class ConfigUtil {
 
     public static synchronized Path ensureCalendarFile() {
         Path path = getIcsPath();
-        ensureCalendarFileExists(path);
-        return path;
+        try {
+            ensureCalendarFileExists(path);
+            return path;
+        } catch (RuntimeException ex) {
+            Path fallback = findWritableFallback(path);
+            if (fallback.equals(path)) {
+                throw ex;
+            }
+            ensureCalendarFileExists(fallback);
+            props.setProperty(KEY_ICS_PATH, fallback.toString());
+            try {
+                save();
+            } catch (Exception ignored) {
+                // Best effort – failure to save shouldn't hide the original path problem.
+            }
+            return fallback;
+        }
+    }
+
+    private static Path findWritableFallback(Path current) {
+        Path working = Paths.get("calendar.ics").toAbsolutePath().normalize();
+        if (!working.equals(current) && isWritableLocation(working)) {
+            return working;
+        }
+        Path home = determineUserHomeCalendar();
+        if (!home.equals(current) && isWritableLocation(home)) {
+            return home;
+        }
+        Path app = determineApplicationDirectory().resolve("calendar.ics").toAbsolutePath().normalize();
+        if (!app.equals(current) && isWritableLocation(app)) {
+            return app;
+        }
+        return current;
     }
 
     public static synchronized boolean isDarkMode() {

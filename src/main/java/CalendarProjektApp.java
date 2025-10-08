@@ -222,9 +222,10 @@ public class CalendarProjektApp extends Application {
                 return;
             }
             ConfigUtil.ensureCalendarFile();
+            List<CalendarEntry> snapshot = snapshotEntriesFromView();
             currentEntries.clear();
-            currentEntries.addAll(snapshotEntriesFromView());
-            IcsUtil.exportIcs(calendarFile, new ArrayList<>(currentEntries));
+            currentEntries.addAll(snapshot);
+            IcsUtil.exportIcs(calendarFile, snapshot);
         } catch (Exception ex) {
             showError("Kalender konnte nicht gespeichert werden", ex);
         }
