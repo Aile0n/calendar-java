@@ -49,6 +49,10 @@ public class ConfigUtil {
         if (p.getProperty("ics.path") == null) {
             p.setProperty("ics.path", "calendar.ics");
         }
+        if (p.getProperty("ui.darkMode") == null) {
+            p.setProperty("ui.darkMode", "false");
+        }
+        // keep backward compatibility: ignore legacy calendar.style if present
         props = p;
     }
 
@@ -84,5 +88,13 @@ public class ConfigUtil {
 
     public static String getDbUrl() {
         return props.getProperty("db.url");
+    }
+
+    public static boolean isDarkMode() {
+        return Boolean.parseBoolean(props.getProperty("ui.darkMode", "false"));
+    }
+
+    public static void setDarkMode(boolean dark) {
+        props.setProperty("ui.darkMode", Boolean.toString(dark));
     }
 }

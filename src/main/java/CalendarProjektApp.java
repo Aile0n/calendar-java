@@ -20,6 +20,7 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.CheckBox;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
@@ -115,6 +116,13 @@ public class CalendarProjektApp extends Application {
             grid.add(icsPathField, 1, 1);
             grid.add(browse, 2, 1);
 
+            // Dark mode toggle
+            Label displayLbl = new Label("Darstellung:");
+            CheckBox darkMode = new CheckBox("Dunkelmodus");
+            darkMode.setSelected(ConfigUtil.isDarkMode());
+            grid.add(displayLbl, 0, 2);
+            grid.add(darkMode, 1, 2);
+
             dialog.getDialogPane().setContent(grid);
 
             var res = dialog.showAndWait();
@@ -124,6 +132,10 @@ public class CalendarProjektApp extends Application {
                     if (rbIcs.isSelected()) {
                         ConfigUtil.setIcsPath(new java.io.File(icsPathField.getText()).toPath());
                     }
+                    // Save dark mode and apply immediately
+                    ConfigUtil.setDarkMode(darkMode.isSelected());
+                    applyTheme(primaryStage.getScene());
+
                     ConfigUtil.save();
                     loadFromDatabase();
                     Alert a = new Alert(Alert.AlertType.INFORMATION, "Einstellungen gespeichert.", ButtonType.OK);
@@ -158,6 +170,7 @@ public class CalendarProjektApp extends Application {
 
         Scene scene = new Scene(root, 1000, 700);
         primaryStage.setScene(scene);
+        applyTheme(scene);
         primaryStage.setTitle("CalendarProjekt");
         primaryStage.show();
 
@@ -412,6 +425,20 @@ public class CalendarProjektApp extends Application {
             return LocalTime.parse(t);
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private void applyTheme(Scene scene) {
+        if (scene == null) return;
+        try {
+            String darkCss = getClass().getResource("/dark.css").toExternalForm();
+            var stylesheets = scene.getStylesheets();
+            stylesheets.remove(darkCss);
+            if (ConfigUtil.isDarkMode()) {
+                stylesheets.add(darkCss);
+            }
+        } catch (Exception ignored) {
+            // ignore if stylesheet not found
         }
     }
 

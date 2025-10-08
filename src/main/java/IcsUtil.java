@@ -7,6 +7,12 @@ import net.fortuna.ical4j.model.Property;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.property.ProdId;
 import net.fortuna.ical4j.model.property.Uid;
+import net.fortuna.ical4j.model.property.RRule;
+import net.fortuna.ical4j.model.property.Categories;
+import net.fortuna.ical4j.model.component.VAlarm;
+import net.fortuna.ical4j.model.property.Action;
+import net.fortuna.ical4j.model.property.Trigger;
+import net.fortuna.ical4j.model.Dur;
 import net.fortuna.ical4j.util.RandomUidGenerator;
 
 import java.io.FileInputStream;
@@ -37,7 +43,30 @@ public class IcsUtil {
                 LocalDateTime endLdt = end != null ? LocalDateTime.ofInstant(end.toInstant(), ZoneId.systemDefault()) : startLdt;
                 String summary = ev.getSummary() != null ? ev.getSummary().getValue() : "(Ohne Titel)";
                 String description = ev.getDescription() != null ? ev.getDescription().getValue() : "";
-                entries.add(new CalendarEntry(summary, description, startLdt, endLdt));
+                CalendarEntry ce = new CalendarEntry(summary, description, startLdt, endLdt);
+                // RRULE
+                var rprop = ev.getProperty(Property.RRULE);
+                if (rprop != null) {
+                    String val = rprop.getValue();
+                    ce.setRecurrenceRule(val.startsWith("RRULE:") ? val : ("RRULE:" + val));
+                }
+                // Categories
+                var catProp = ev.getProperty(Property.CATEGORIES);
+                if (catProp != null) {
+                    ce.setCategory(catProp.getValue());
+                }
+                // VALARM -> reminder minutes
+                if (!ev.getAlarms().isEmpty()) {
+                    for (VAlarm a : ev.getAlarms()) {
+                        var trig = (Trigger) a.getProperty(Property.TRIGGER);
+                        if (trig != null) {
+                            String tval = trig.getValue();
+                            Integer mins = parseTriggerToMinutes(tval);
+                            if (mins != null) { ce.setReminderMinutesBefore(mins); break; }
+                        }
+                    }
+                }
+                entries.add(ce);
             }
             return entries;
         }
@@ -53,6 +82,24 @@ public class IcsUtil {
             VEvent ev = new VEvent(new DateTime(start), new DateTime(end), entry.getTitle());
             if (entry.getDescription() != null && !entry.getDescription().isBlank()) {
                 ev.getProperties().add(new net.fortuna.ical4j.model.property.Description(entry.getDescription()));
+            }
+            // Category
+            if (entry.getCategory() != null && !entry.getCategory().isBlank()) {
+                ev.getProperties().add(new Categories(entry.getCategory()));
+            }
+            // RRULE
+            if (entry.getRecurrenceRule() != null && !entry.getRecurrenceRule().isBlank()) {
+                String val = entry.getRecurrenceRule().startsWith("RRULE:") ? entry.getRecurrenceRule().substring(6) : entry.getRecurrenceRule();
+                ev.getProperties().add(new RRule(val));
+            }
+            // Reminder via VALARM
+            if (entry.getReminderMinutesBefore() != null && entry.getReminderMinutesBefore() > 0) {
+                int m = entry.getReminderMinutesBefore();
+                VAlarm alarm = new VAlarm();
+                alarm.getProperties().add(Action.DISPLAY);
+                alarm.getProperties().add(new net.fortuna.ical4j.model.property.Description("Erinnerung"));
+                alarm.getProperties().add(new Trigger(new Dur(0, 0, -m, 0)));
+                ev.getAlarms().add(alarm);
             }
             calendar.getComponents().add(ev);
         }
@@ -232,5 +279,25 @@ public class IcsUtil {
                 .replace("\\;", ";")
                 .replace("\\\\", "\\");
         return r;
+    }
+
+    private static Integer parseTriggerToMinutes(String value) {
+        if (value == null || value.isBlank()) return null;
+        String v = value.trim();
+        try {
+            // format like -PT15M or PT15M
+            if (v.startsWith("-")) v = v.substring(1);
+            if (v.startsWith("P")) {
+                java.time.Duration d = java.time.Duration.parse(v);
+                long minutes = d.toMinutes();
+                return (int) Math.abs(minutes);
+            }
+            // Try ical4j Dur parse as fallback
+            Dur d = new Dur(value);
+            int minutes = Math.abs(d.getMinutes() + d.getHours() * 60 + d.getDays() * 24 * 60);
+            return minutes;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

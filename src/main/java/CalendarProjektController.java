@@ -2,6 +2,7 @@ import com.calendarfx.model.Calendar;
 import com.calendarfx.model.CalendarSource;
 import com.calendarfx.model.Entry;
 import com.calendarfx.view.CalendarView;
+import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -37,7 +38,8 @@ public class CalendarProjektController implements Initializable {
     @FXML private Button settingsButton;
 
     private CalendarView calendarView;
-    private final Calendar fxCalendar = new Calendar("Termine");
+    private final Calendar fxCalendar = new Calendar("Allgemein");
+    private final java.util.Map<String, Calendar> categoryCalendars = new java.util.HashMap<>();
 
     private final CalendarEntryDAO dao = new CalendarEntryDAO();
     private final ZoneId zone = ZoneId.systemDefault();
@@ -51,6 +53,9 @@ public class CalendarProjektController implements Initializable {
         CalendarSource source = new CalendarSource("Meine Kalender");
         source.getCalendars().add(fxCalendar);
         calendarView.getCalendarSources().add(source);
+        // Apply theme after scene is ready
+        calendarContainer.sceneProperty().addListener((obs, oldS, newS) -> applyTheme());
+        applyTheme();
 
         AnchorPane.setTopAnchor(calendarView, 0.0);
         AnchorPane.setRightAnchor(calendarView, 0.0);
@@ -74,6 +79,7 @@ public class CalendarProjektController implements Initializable {
             try {
                 List<CalendarEntry> items = dao.findAll();
                 populateCalendar(items);
+                scheduleReminders(items);
             } catch (Exception ex) {
                 showError("Fehler beim Laden aus der Datenbank", ex);
             }
@@ -85,6 +91,7 @@ public class CalendarProjektController implements Initializable {
                     currentEntries.addAll(IcsUtil.importIcs(path));
                 }
                 populateCalendar(currentEntries);
+                scheduleReminders(currentEntries);
             } catch (Exception ex) {
                 showError("Fehler beim Laden aus ICS", ex);
             }
@@ -92,14 +99,41 @@ public class CalendarProjektController implements Initializable {
     }
 
     private void populateCalendar(List<CalendarEntry> items) {
+        // clear all calendars
+        fxCalendar.clear();
+        for (Calendar cal : categoryCalendars.values()) cal.clear();
         for (CalendarEntry ce : items) {
             Entry<String> entry = new Entry<>(ce.getTitle());
             if (ce.getDescription() != null && !ce.getDescription().isBlank()) {
                 entry.setLocation(ce.getDescription());
             }
             entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
-            fxCalendar.addEntry(entry);
+            if (ce.getRecurrenceRule() != null && !ce.getRecurrenceRule().isBlank()) {
+                try { entry.setRecurrenceRule(ce.getRecurrenceRule()); } catch (Exception ignored) {}
+            }
+            String cat = (ce.getCategory() == null || ce.getCategory().isBlank()) ? "Allgemein" : ce.getCategory();
+            Calendar target = getOrCreateCalendar(cat);
+            target.addEntry(entry);
         }
+    }
+
+    private Calendar getOrCreateCalendar(String category) {
+        if ("Allgemein".equalsIgnoreCase(category)) return fxCalendar;
+        return categoryCalendars.computeIfAbsent(category, c -> {
+            Calendar cal = new Calendar(c);
+            // assign style based on hash to spread colors deterministically
+            Calendar.Style[] styles = Calendar.Style.values();
+            Calendar.Style style = styles[Math.abs(c.hashCode()) % styles.length];
+            cal.setStyle(style);
+            // add to view
+            for (CalendarSource src : calendarView.getCalendarSources()) {
+                if (!src.getCalendars().contains(cal)) {
+                    src.getCalendars().add(cal);
+                    break;
+                }
+            }
+            return cal;
+        });
     }
 
     private void onNewEntry(ActionEvent evt) {
@@ -121,6 +155,18 @@ public class CalendarProjektController implements Initializable {
         TextField startTime = new TextField("09:00");
         DatePicker endDate = new DatePicker(LocalDate.now());
         TextField endTime = new TextField("10:00");
+        ChoiceBox<String> categoryChoice = new ChoiceBox<>(FXCollections.observableArrayList(
+                "Allgemein", "Arbeit", "Privat", "Familie", "Sonstiges"
+        ));
+        categoryChoice.setValue("Allgemein");
+        ChoiceBox<String> recurChoice = new ChoiceBox<>(FXCollections.observableArrayList(
+                "Keine", "Täglich", "Wöchentlich", "Monatlich"
+        ));
+        recurChoice.setValue("Keine");
+        TextField recurCount = new TextField();
+        recurCount.setPromptText("Anzahl (optional)");
+        TextField reminderMinutes = new TextField();
+        reminderMinutes.setPromptText("Min. vor Beginn (optional)");
 
         grid.add(new Label("Titel:"), 0, 0);
         grid.add(titleField, 1, 0);
@@ -132,6 +178,13 @@ public class CalendarProjektController implements Initializable {
         grid.add(new Label("Ende (Datum / Zeit):"), 0, 3);
         grid.add(endDate, 1, 3);
         grid.add(endTime, 2, 3);
+        grid.add(new Label("Kategorie:"), 0, 4);
+        grid.add(categoryChoice, 1, 4);
+        grid.add(new Label("Serie:"), 0, 5);
+        grid.add(recurChoice, 1, 5);
+        grid.add(recurCount, 2, 5);
+        grid.add(new Label("Erinnerung:"), 0, 6);
+        grid.add(reminderMinutes, 1, 6);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -148,6 +201,16 @@ public class CalendarProjektController implements Initializable {
                 LocalDateTime start = LocalDateTime.of(startDate.getValue(), parseTime(startTime.getText()));
                 LocalDateTime end = LocalDateTime.of(endDate.getValue(), parseTime(endTime.getText()));
                 CalendarEntry ce = new CalendarEntry(titleField.getText().trim(), descField.getText(), start, end);
+                // category
+                ce.setCategory(categoryChoice.getValue());
+                // recurrence
+                String rrule = buildRRule(recurChoice.getValue(), recurCount.getText());
+                ce.setRecurrenceRule(rrule);
+                // reminder
+                Integer rem = null;
+                try { rem = (reminderMinutes.getText()==null||reminderMinutes.getText().isBlank())? null : Integer.parseInt(reminderMinutes.getText().trim()); } catch (Exception ignore) {}
+                ce.setReminderMinutesBefore(rem);
+
                 if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
                     dao.save(ce);
                 } else {
@@ -283,6 +346,12 @@ public class CalendarProjektController implements Initializable {
         grid.add(icsPathField, 1, 1);
         grid.add(browse, 2, 1);
 
+        // Dark mode toggle
+        CheckBox darkMode = new CheckBox("Dunkelmodus");
+        darkMode.setSelected(ConfigUtil.isDarkMode());
+        grid.add(new Label("Darstellung:"), 0, 2);
+        grid.add(darkMode, 1, 2);
+
         dialog.getDialogPane().setContent(grid);
 
         Optional<ButtonType> res = dialog.showAndWait();
@@ -292,6 +361,10 @@ public class CalendarProjektController implements Initializable {
                 if (rbIcs.isSelected()) {
                     ConfigUtil.setIcsPath(new java.io.File(icsPathField.getText()).toPath());
                 }
+                // save dark mode and apply immediately
+                ConfigUtil.setDarkMode(darkMode.isSelected());
+                applyTheme();
+
                 ConfigUtil.save();
                 reloadData();
                 Alert a = new Alert(Alert.AlertType.INFORMATION, "Einstellungen gespeichert.", ButtonType.OK);
@@ -309,5 +382,64 @@ public class CalendarProjektController implements Initializable {
         alert.setHeaderText(header);
         alert.setContentText(ex.getMessage());
         alert.showAndWait();
+    }
+
+    private void applyTheme() {
+        if (calendarContainer.getScene() == null) return;
+        var stylesheets = calendarContainer.getScene().getStylesheets();
+        String darkCss = getClass().getResource("/dark.css").toExternalForm();
+        stylesheets.remove(darkCss);
+        if (ConfigUtil.isDarkMode()) {
+            stylesheets.add(darkCss);
+        }
+    }
+    private String buildRRule(String choice, String countText) {
+        if (choice == null || choice.equals("Keine")) return null;
+        String freq = switch (choice) {
+            case "Täglich" -> "DAILY";
+            case "Wöchentlich" -> "WEEKLY";
+            case "Monatlich" -> "MONTHLY";
+            default -> null;
+        };
+        if (freq == null) return null;
+        StringBuilder sb = new StringBuilder("RRULE:FREQ=").append(freq);
+        try {
+            if (countText != null && !countText.isBlank()) {
+                int c = Integer.parseInt(countText.trim());
+                if (c > 0) sb.append(";COUNT=").append(c);
+            }
+        } catch (Exception ignored) {}
+        return sb.toString();
+    }
+
+    private javafx.animation.Timeline reminderTimeline;
+    private final java.util.Set<String> notified = new java.util.HashSet<>();
+
+    private void scheduleReminders(List<CalendarEntry> items) {
+        if (reminderTimeline != null) {
+            reminderTimeline.stop();
+        }
+        reminderTimeline = new javafx.animation.Timeline(
+                new javafx.animation.KeyFrame(javafx.util.Duration.seconds(5), e -> checkReminders(items))
+        );
+        reminderTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        reminderTimeline.play();
+    }
+
+    private void checkReminders(List<CalendarEntry> items) {
+        LocalDateTime now = LocalDateTime.now();
+        for (CalendarEntry ce : items) {
+            Integer mins = ce.getReminderMinutesBefore();
+            if (mins == null || mins <= 0) continue;
+            LocalDateTime notifyAt = ce.getStart().minusMinutes(mins);
+            if (!now.isBefore(notifyAt) && now.isBefore(ce.getStart())) {
+                String key = (ce.getId() != null ? ("ID"+ce.getId()) : ce.getTitle()) + "@" + ce.getStart();
+                if (notified.add(key)) {
+                    Alert a = new Alert(Alert.AlertType.INFORMATION, "In "+mins+" Minuten: " + ce.getTitle(), ButtonType.OK);
+                    a.setHeaderText("Erinnerung");
+                    a.show();
+                }
+            }
+        }
     }
 }

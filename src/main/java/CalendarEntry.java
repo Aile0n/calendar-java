@@ -12,6 +12,10 @@ public class CalendarEntry {
     private String description;
     private LocalDateTime start;
     private LocalDateTime end;
+    // Optional features
+    private String recurrenceRule; // e.g., RRULE:FREQ=WEEKLY;COUNT=5
+    private Integer reminderMinutesBefore; // minutes before start
+    private String category; // simple label/category name
 
     public CalendarEntry() {}
 
@@ -41,6 +45,15 @@ public class CalendarEntry {
 
     public LocalDateTime getEnd() { return end; }
     public void setEnd(LocalDateTime end) { this.end = end; }
+
+    public String getRecurrenceRule() { return recurrenceRule; }
+    public void setRecurrenceRule(String recurrenceRule) { this.recurrenceRule = recurrenceRule; }
+
+    public Integer getReminderMinutesBefore() { return reminderMinutesBefore; }
+    public void setReminderMinutesBefore(Integer reminderMinutesBefore) { this.reminderMinutesBefore = reminderMinutesBefore; }
+
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 
     @Override
     public String toString() {
