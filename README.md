@@ -7,7 +7,9 @@ A simple desktop calendar application built with JavaFX and CalendarFX. It can i
 
 The UI is localized in German and provides buttons for creating events, importing/exporting, and switching storage mode in-app.
 
-For a beginner-friendly walkthrough of the codebase, see CODE_EXPLANATION.md.
+**Documentation**:
+- For a comprehensive guide on how this project was created in IntelliJ IDEA, library setup, and JAR creation, see [PROJECT_SETUP_GUIDE.md](PROJECT_SETUP_GUIDE.md)
+- For a beginner-friendly walkthrough of the codebase, see [CODE_EXPLANATION.md](CODE_EXPLANATION.md)
 
 
 ## Tech Stack
