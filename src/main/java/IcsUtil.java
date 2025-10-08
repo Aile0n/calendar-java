@@ -50,6 +50,12 @@ public class IcsUtil {
         List<CalendarEntry> entries = new ArrayList<>();
         for (var component : calendar.getComponents(Component.VEVENT)) {
             VEvent ev = (VEvent) component;
+            
+            // Validate required fields
+            if (ev.getStartDate() == null) {
+                continue; // Skip events without start date
+            }
+            
             var start = ev.getStartDate().getDate();
             var end = ev.getEndDate() != null ? ev.getEndDate().getDate() : null;
             LocalDateTime startLdt = LocalDateTime.ofInstant(start.toInstant(), ZoneId.systemDefault());
@@ -85,13 +91,30 @@ public class IcsUtil {
     }
 
     public static void exportIcs(Path path, List<CalendarEntry> entries) throws Exception {
+        if (entries == null) {
+            entries = new ArrayList<>();
+        }
+        
         Calendar calendar = new Calendar();
         calendar.getProperties().add(new ProdId("-//Calendar Java//iCal4j 3.x//EN"));
         calendar.getProperties().add(net.fortuna.ical4j.model.property.Version.VERSION_2_0);
+        
+        // Initialize UID generator
+        RandomUidGenerator uidGenerator = new RandomUidGenerator();
+        
         for (CalendarEntry entry : entries) {
+            if (entry == null || entry.getStart() == null || entry.getEnd() == null) {
+                continue; // Skip invalid entries
+            }
+            
             java.util.Date start = java.util.Date.from(entry.getStart().atZone(ZoneId.systemDefault()).toInstant());
             java.util.Date end = java.util.Date.from(entry.getEnd().atZone(ZoneId.systemDefault()).toInstant());
-            VEvent ev = new VEvent(new DateTime(start), new DateTime(end), entry.getTitle());
+            String title = entry.getTitle() != null ? entry.getTitle() : "(Ohne Titel)";
+            VEvent ev = new VEvent(new DateTime(start), new DateTime(end), title);
+            
+            // Add required UID property
+            ev.getProperties().add(uidGenerator.generateUid());
+            
             if (entry.getDescription() != null && !entry.getDescription().isBlank()) {
                 ev.getProperties().add(new net.fortuna.ical4j.model.property.Description(entry.getDescription()));
             }
