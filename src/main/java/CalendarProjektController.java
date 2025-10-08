@@ -1,5 +1,6 @@
 import com.calendarfx.model.Calendar;
 import com.calendarfx.model.CalendarSource;
+import com.calendarfx.model.CalendarEvent;
 import com.calendarfx.model.Entry;
 import com.calendarfx.view.CalendarView;
 import javafx.application.Platform;
@@ -21,7 +22,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.ResourceBundle;
+import java.util.Set;
 
 /**
  * FXML-basierte Variante der Anwendung mit denselben Funktionen wie
@@ -41,8 +48,10 @@ public class CalendarProjektController implements Initializable {
     private final Calendar fxCalendar = new Calendar("Allgemein");
     private final Map<String, Calendar> categoryCalendars = new HashMap<>();
     private final List<CalendarEntry> currentEntries = new ArrayList<>();
+    private final Set<Calendar> observedCalendars = new HashSet<>();
     private CalendarSource mainSource;
     private Path calendarFile;
+    private boolean updatingFromStorage;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -52,6 +61,7 @@ public class CalendarProjektController implements Initializable {
         mainSource = new CalendarSource("Meine Kalender");
         mainSource.getCalendars().add(fxCalendar);
         calendarView.getCalendarSources().add(mainSource);
+        attachCalendarListeners(fxCalendar);
 
         AnchorPane.setTopAnchor(calendarView, 0.0);
         AnchorPane.setRightAnchor(calendarView, 0.0);
@@ -74,6 +84,7 @@ public class CalendarProjektController implements Initializable {
     }
 
     private void reloadFromStorage() {
+        updatingFromStorage = true;
         fxCalendar.clear();
         categoryCalendars.values().forEach(Calendar::clear);
         try {
@@ -85,26 +96,14 @@ public class CalendarProjektController implements Initializable {
             populateCalendar(currentEntries);
         } catch (Exception ex) {
             showError("Fehler beim Laden der ICS-Datei", ex);
+        } finally {
+            updatingFromStorage = false;
         }
     }
 
     private void populateCalendar(List<CalendarEntry> items) {
-        ZoneId zone = ZoneId.systemDefault();
         for (CalendarEntry ce : items) {
-            Entry<String> entry = new Entry<>(ce.getTitle());
-            if (ce.getDescription() != null && !ce.getDescription().isBlank()) {
-                entry.setLocation(ce.getDescription());
-            }
-            entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
-            if (ce.getRecurrenceRule() != null && !ce.getRecurrenceRule().isBlank()) {
-                try {
-                    entry.setRecurrenceRule(ce.getRecurrenceRule());
-                } catch (Exception ignored) {
-                }
-            }
-            String category = (ce.getCategory() == null || ce.getCategory().isBlank()) ? "Allgemein" : ce.getCategory();
-            Calendar target = getOrCreateCalendar(category);
-            target.addEntry(entry);
+            addEntryToView(ce);
         }
     }
 
@@ -120,13 +119,19 @@ public class CalendarProjektController implements Initializable {
             if (mainSource != null && !mainSource.getCalendars().contains(cal)) {
                 mainSource.getCalendars().add(cal);
             }
+            attachCalendarListeners(cal);
             return cal;
         });
     }
 
     private void persistEntries() {
         try {
+            if (updatingFromStorage) {
+                return;
+            }
             ConfigUtil.ensureCalendarFile();
+            currentEntries.clear();
+            currentEntries.addAll(snapshotEntriesFromView());
             IcsUtil.exportIcs(calendarFile, new ArrayList<>(currentEntries));
         } catch (Exception ex) {
             showError("Kalender konnte nicht gespeichert werden", ex);
@@ -198,9 +203,15 @@ public class CalendarProjektController implements Initializable {
         }
         try {
             List<CalendarEntry> imported = IcsUtil.importAuto(file.toPath());
-            currentEntries.addAll(imported);
+            updatingFromStorage = true;
+            try {
+                for (CalendarEntry ce : imported) {
+                    addEntryToView(ce);
+                }
+            } finally {
+                updatingFromStorage = false;
+            }
             persistEntries();
-            reloadFromStorage();
         } catch (Exception ex) {
             showError("Import fehlgeschlagen", ex);
         }
@@ -229,10 +240,11 @@ public class CalendarProjektController implements Initializable {
                     out = out.resolveSibling(file.getName() + ".ics");
                 }
             }
+            List<CalendarEntry> snapshot = snapshotEntriesFromView();
             if (out.toString().toLowerCase().endsWith(".vcs")) {
-                IcsUtil.exportVcs(out, currentEntries);
+                IcsUtil.exportVcs(out, snapshot);
             } else {
-                IcsUtil.exportIcs(out, currentEntries);
+                IcsUtil.exportIcs(out, snapshot);
             }
         } catch (Exception ex) {
             showError("Export fehlgeschlagen", ex);
@@ -287,9 +299,8 @@ public class CalendarProjektController implements Initializable {
                 LocalDateTime start = LocalDateTime.of(startDate.getValue(), parseTime(startTime.getText()));
                 LocalDateTime end = LocalDateTime.of(endDate.getValue(), parseTime(endTime.getText()));
                 CalendarEntry ce = new CalendarEntry(titleField.getText().trim(), descField.getText(), start, end);
-                currentEntries.add(ce);
+                addEntryToView(ce);
                 persistEntries();
-                reloadFromStorage();
             } catch (Exception ex) {
                 evt.consume();
                 showError("Speichern fehlgeschlagen", ex);
@@ -326,6 +337,72 @@ public class CalendarProjektController implements Initializable {
     private void exitAndSave() {
         persistEntries();
         Platform.exit();
+    }
+
+    private void addEntryToView(CalendarEntry ce) {
+        if (ce == null || ce.getStart() == null || ce.getEnd() == null) {
+            return;
+        }
+        ZoneId zone = ZoneId.systemDefault();
+        Entry<String> entry = new Entry<>(ce.getTitle());
+        if (ce.getDescription() != null && !ce.getDescription().isBlank()) {
+            entry.setLocation(ce.getDescription());
+        }
+        entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
+        if (ce.getRecurrenceRule() != null && !ce.getRecurrenceRule().isBlank()) {
+            try {
+                entry.setRecurrenceRule(ce.getRecurrenceRule());
+            } catch (Exception ignored) {
+            }
+        }
+        String category = (ce.getCategory() == null || ce.getCategory().isBlank()) ? "Allgemein" : ce.getCategory();
+        Calendar target = getOrCreateCalendar(category);
+        target.addEntry(entry);
+    }
+
+    private List<CalendarEntry> snapshotEntriesFromView() {
+        List<CalendarEntry> snapshot = new ArrayList<>();
+        if (mainSource == null) {
+            return snapshot;
+        }
+        ZoneId zone = ZoneId.systemDefault();
+        LocalDate start = LocalDate.now().minusYears(100);
+        LocalDate end = LocalDate.now().plusYears(100);
+        Set<Entry<?>> seen = new HashSet<>();
+        for (Calendar calendar : mainSource.getCalendars()) {
+            String category = calendar == fxCalendar ? "Allgemein" : calendar.getName();
+            for (Entry<?> entry : calendar.findEntries(start, end, zone)) {
+                if (!seen.add(entry)) {
+                    continue;
+                }
+                LocalDateTime startLdt = entry.getStartAsLocalDateTime();
+                LocalDateTime endLdt = entry.getEndAsLocalDateTime();
+                if (startLdt == null || endLdt == null) {
+                    continue;
+                }
+                CalendarEntry ce = new CalendarEntry(entry.getTitle(), entry.getLocation(), startLdt, endLdt);
+                ce.setCategory(category);
+                String recurrence = entry.getRecurrenceRule();
+                if (recurrence != null && !recurrence.isBlank()) {
+                    ce.setRecurrenceRule(recurrence);
+                }
+                snapshot.add(ce);
+            }
+        }
+        return snapshot;
+    }
+
+    private void attachCalendarListeners(Calendar calendar) {
+        if (calendar == null || observedCalendars.contains(calendar)) {
+            return;
+        }
+        observedCalendars.add(calendar);
+        calendar.addEventHandler(CalendarEvent.ANY, event -> {
+            if (event == null || event.getEntry() == null || updatingFromStorage) {
+                return;
+            }
+            persistEntries();
+        });
     }
 
     private void showError(String header, Exception ex) {
