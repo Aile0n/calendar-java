@@ -17,6 +17,8 @@ import net.fortuna.ical4j.util.RandomUidGenerator;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -32,44 +34,54 @@ public class IcsUtil {
 
     public static List<CalendarEntry> importIcs(Path path) throws Exception {
         try (FileInputStream fis = new FileInputStream(path.toFile())) {
-            CalendarBuilder builder = new CalendarBuilder();
-            Calendar calendar = builder.build(fis);
-            List<CalendarEntry> entries = new ArrayList<>();
-            for (var component : calendar.getComponents(Component.VEVENT)) {
-                VEvent ev = (VEvent) component;
-                var start = ev.getStartDate().getDate();
-                var end = ev.getEndDate() != null ? ev.getEndDate().getDate() : null;
-                LocalDateTime startLdt = LocalDateTime.ofInstant(start.toInstant(), ZoneId.systemDefault());
-                LocalDateTime endLdt = end != null ? LocalDateTime.ofInstant(end.toInstant(), ZoneId.systemDefault()) : startLdt;
-                String summary = ev.getSummary() != null ? ev.getSummary().getValue() : "(Ohne Titel)";
-                String description = ev.getDescription() != null ? ev.getDescription().getValue() : "";
-                CalendarEntry ce = new CalendarEntry(summary, description, startLdt, endLdt);
-                // RRULE
-                var rprop = ev.getProperty(Property.RRULE);
-                if (rprop != null) {
-                    String val = rprop.getValue();
-                    ce.setRecurrenceRule(val.startsWith("RRULE:") ? val : ("RRULE:" + val));
-                }
-                // Categories
-                var catProp = ev.getProperty(Property.CATEGORIES);
-                if (catProp != null) {
-                    ce.setCategory(catProp.getValue());
-                }
-                // VALARM -> reminder minutes
-                if (!ev.getAlarms().isEmpty()) {
-                    for (VAlarm a : ev.getAlarms()) {
-                        var trig = (Trigger) a.getProperty(Property.TRIGGER);
-                        if (trig != null) {
-                            String tval = trig.getValue();
-                            Integer mins = parseTriggerToMinutes(tval);
-                            if (mins != null) { ce.setReminderMinutesBefore(mins); break; }
-                        }
+            return importIcs(fis);
+        }
+    }
+
+    public static List<CalendarEntry> importIcsFromUrl(String url) throws Exception {
+        try (InputStream is = new URL(url).openStream()) {
+            return importIcs(is);
+        }
+    }
+
+    private static List<CalendarEntry> importIcs(InputStream is) throws Exception {
+        CalendarBuilder builder = new CalendarBuilder();
+        Calendar calendar = builder.build(is);
+        List<CalendarEntry> entries = new ArrayList<>();
+        for (var component : calendar.getComponents(Component.VEVENT)) {
+            VEvent ev = (VEvent) component;
+            var start = ev.getStartDate().getDate();
+            var end = ev.getEndDate() != null ? ev.getEndDate().getDate() : null;
+            LocalDateTime startLdt = LocalDateTime.ofInstant(start.toInstant(), ZoneId.systemDefault());
+            LocalDateTime endLdt = end != null ? LocalDateTime.ofInstant(end.toInstant(), ZoneId.systemDefault()) : startLdt;
+            String summary = ev.getSummary() != null ? ev.getSummary().getValue() : "(Ohne Titel)";
+            String description = ev.getDescription() != null ? ev.getDescription().getValue() : "";
+            CalendarEntry ce = new CalendarEntry(summary, description, startLdt, endLdt);
+            // RRULE
+            var rprop = ev.getProperty(Property.RRULE);
+            if (rprop != null) {
+                String val = rprop.getValue();
+                ce.setRecurrenceRule(val.startsWith("RRULE:") ? val : ("RRULE:" + val));
+            }
+            // Categories
+            var catProp = ev.getProperty(Property.CATEGORIES);
+            if (catProp != null) {
+                ce.setCategory(catProp.getValue());
+            }
+            // VALARM -> reminder minutes
+            if (!ev.getAlarms().isEmpty()) {
+                for (VAlarm a : ev.getAlarms()) {
+                    var trig = (Trigger) a.getProperty(Property.TRIGGER);
+                    if (trig != null) {
+                        String tval = trig.getValue();
+                        Integer mins = parseTriggerToMinutes(tval);
+                        if (mins != null) { ce.setReminderMinutesBefore(mins); break; }
                     }
                 }
-                entries.add(ce);
             }
-            return entries;
+            entries.add(ce);
         }
+        return entries;
     }
 
     public static void exportIcs(Path path, List<CalendarEntry> entries) throws Exception {

@@ -11,6 +11,8 @@
                 <Button fx:id="newButton" text="Neuer Termin" />
                 <Button fx:id="importButton" text="Importieren (ICS/VCS)" />
                 <Button fx:id="exportButton" text="Exportieren (ICS/VCS)" />
+                <Separator />
+                <Button fx:id="subscribeButton" text="Abonnieren (ICS-Feed)" />
             </items>
         </ToolBar>
         <AnchorPane fx:id="calendarContainer" VBox.vgrow="ALWAYS" />

@@ -87,6 +87,7 @@ public class CalendarProjektApp extends Application {
             Dialog<ButtonType> dialog = new Dialog<>();
             dialog.setTitle("Einstellungen");
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            applyThemeToDialog(dialog.getDialogPane());
 
             javafx.scene.control.ToggleGroup group = new javafx.scene.control.ToggleGroup();
             javafx.scene.control.RadioButton rbIcs = new javafx.scene.control.RadioButton("Speichern als ICS");
@@ -175,7 +176,22 @@ public class CalendarProjektApp extends Application {
         primaryStage.show();
 
         // Localize CalendarFX built-in controls (e.g., Today/Day/Week/Month/Year, Search)
-        Platform.runLater(() -> localizeNode(root));
+        Platform.runLater(() -> {
+            localizeNode(root);
+            // Periodically look for a sidebar mini calendar (month-view or date-picker) after user expands it
+            javafx.animation.Timeline poll = new javafx.animation.Timeline(
+                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(2), ev -> tryDumpMiniCalendar(root))
+            );
+            poll.setCycleCount(5);
+            poll.play();
+
+            // Also scan headers to learn the exact label classes used for the large date titles
+            javafx.animation.Timeline headerScan = new javafx.animation.Timeline(
+                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(3), ev -> scanHeaderLabels(root))
+            );
+            headerScan.setCycleCount(3);
+            headerScan.play();
+        });
     }
 
     private void loadFromDatabase() {
@@ -280,6 +296,8 @@ public class CalendarProjektApp extends Application {
         alert.setTitle("Fehler");
         alert.setHeaderText(header);
         alert.setContentText(ex.getMessage());
+        // Apply dark stylesheet to dialog
+        applyThemeToDialog(alert.getDialogPane());
         alert.showAndWait();
     }
 
@@ -298,7 +316,156 @@ public class CalendarProjektApp extends Application {
         alert.setTitle("Info");
         alert.setHeaderText("Über dieses Projekt");
         alert.setContentText(sb.toString());
+        applyThemeToDialog(alert.getDialogPane());
         alert.showAndWait();
+    }
+
+    // ---- Debug helpers to identify sidebar nodes/classes ----
+    private javafx.scene.control.Labeled findLabeledByText(Parent root, String text) {
+        if (root == null) return null;
+        for (Node child : root.getChildrenUnmodifiable()) {
+            if (child instanceof javafx.scene.control.Labeled l) {
+                if (text.equals(l.getText())) return l;
+            }
+            if (child instanceof Parent p) {
+                var res = findLabeledByText(p, text);
+                if (res != null) return res;
+            }
+        }
+        return null;
+    }
+    private Parent findSidebarByTitle(Parent root, String title) {
+        javafx.scene.control.Labeled labeled = findLabeledByText(root, title);
+        if (labeled == null) return null;
+        // walk up a few levels to get the container subtree
+        Node p = labeled;
+        for (int i = 0; i < 6 && p != null; i++) p = p.getParent();
+        if (p instanceof Parent) return (Parent) p;
+        return labeled.getParent() instanceof Parent ? (Parent) labeled.getParent() : null;
+    }
+    private void dumpNodeTree(Node node, int depth, int[] counter) {
+        if (node == null) return;
+        if (counter[0] > 400) return; // limit output
+        String indent = " ".repeat(Math.min(depth, 30));
+        String styleClasses = (node.getStyleClass() == null) ? "" : node.getStyleClass().toString();
+        String id = node.getId();
+        System.out.println("[DEBUG_LOG] " + indent + node.getClass().getName() + (id != null ? ("#"+id) : "") + " " + styleClasses);
+        counter[0]++;
+        if (node instanceof Parent p) {
+            for (Node c : p.getChildrenUnmodifiable()) {
+                dumpNodeTree(c, depth + 1, counter);
+                if (counter[0] > 400) break;
+            }
+        }
+    }
+
+    private boolean miniCalendarDumped = false;
+    private void tryDumpMiniCalendar(Parent root) {
+        if (miniCalendarDumped) return;
+        // Try to find obvious mini calendar nodes
+        Node n = findFirstByStyleClass(root, "month-view");
+        if (n == null) n = findFirstByStyleClass(root, "date-picker");
+        // Many CalendarFX builds place the sidebar content in a "tray" / "drawer"
+        if (n == null) n = findFirstByStyleClass(root, "tray");
+        if (n == null) n = findFirstByStyleClass(root, "drawer");
+        Parent toDumpParent = null;
+        if (n != null) {
+            // dump a bit higher in tree to see wrappers
+            Node base = n;
+            for (int i = 0; i < 4 && base != null; i++) base = base.getParent();
+            toDumpParent = (base instanceof Parent) ? (Parent) base : null;
+            System.out.println("[DEBUG_LOG] Found mini calendar or tray node: " + n.getClass().getName() + " " + n.getStyleClass());
+        }
+        if (toDumpParent == null) {
+            // fallback: try to find sidebar by the localized title "Kalender"
+            toDumpParent = findSidebarByTitle(root, "Kalender");
+            if (toDumpParent != null) {
+                System.out.println("[DEBUG_LOG] Fallback: dumping subtree for sidebar titled 'Kalender'");
+            }
+        }
+        // If we accidentally picked the top left toolbar container, ignore and do full dump
+        if (toDumpParent != null) {
+            String cls = toDumpParent.getStyleClass() == null ? "" : toDumpParent.getStyleClass().toString();
+            if (cls.contains("left-toolbar-container")) {
+                toDumpParent = null;
+            }
+        }
+        if (toDumpParent != null) {
+            dumpNodeTree(toDumpParent, 0, new int[]{0});
+            miniCalendarDumped = true;
+        } else {
+            // ultimate fallback: dump the first 400 nodes of the entire scene graph
+            System.out.println("[DEBUG_LOG] Full scene dump (first 400 nodes)");
+            dumpNodeTree(root, 0, new int[]{0});
+            miniCalendarDumped = true;
+        }
+    }
+    private Node findFirstByStyleClass(Parent root, String styleClass) {
+        if (root == null) return null;
+        for (Node child : root.getChildrenUnmodifiable()) {
+            if (child.getStyleClass() != null && child.getStyleClass().contains(styleClass)) return child;
+            if (child instanceof Parent p) {
+                Node res = findFirstByStyleClass(p, styleClass);
+                if (res != null) return res;
+            }
+        }
+        return null;
+    }
+
+    // ---- Scan page headers to identify label classes/texts ----
+    private void scanHeaderLabels(Parent root) {
+        try {
+            int[] count = {0};
+            scanHeaderRecursive(root, count);
+        } catch (Exception ignored) { }
+    }
+    private void scanHeaderRecursive(Node node, int[] count) {
+        if (node == null || count[0] > 120) return;
+        boolean isHeader = node.getStyleClass() != null && node.getStyleClass().contains("header");
+        if (isHeader && node instanceof Parent p) {
+            String page = pageType(node);
+            if (page != null) {
+                for (Node c : p.getChildrenUnmodifiable()) {
+                    if (c instanceof javafx.scene.control.Labeled l) {
+                        String text = l.getText();
+                        if (text == null) text = "";
+                        boolean print = true;
+                        if ("day".equals(page)) {
+                            // Expect format like "Mittwoch, 08. Oktober 2025" — avoid generic "Oktober 2025"
+                            print = text.matches("^.+,\\s+\\d{1,2}\\.\\s+.+\\s+\\d{4}$");
+                        }
+                        if (print) {
+                            System.out.println("[DEBUG_LOG] HEADER label ("+page+"): classes=" + l.getStyleClass() + ", text='" + text + "'");
+                            count[0]++;
+                            if (count[0] > 120) return;
+                        }
+                    }
+                    if (c instanceof Parent) scanHeaderRecursive(c, count);
+                }
+            }
+        } else if (node instanceof Parent p) {
+            for (Node c : p.getChildrenUnmodifiable()) {
+                scanHeaderRecursive(c, count);
+                if (count[0] > 120) return;
+            }
+        }
+    }
+    private boolean belongsToPage(Node node) {
+        return pageType(node) != null;
+    }
+    private String pageType(Node node) {
+        Node n = node;
+        for (int i = 0; i < 12 && n != null; i++) {
+            var classes = n.getStyleClass();
+            if (classes != null) {
+                if (classes.contains("day-page")) return "day";
+                if (classes.contains("week-page")) return "week";
+                if (classes.contains("month-page")) return "month";
+                if (classes.contains("year-page")) return "year";
+            }
+            n = n.getParent();
+        }
+        return null;
     }
 
     private void localizeNode(Node node) {
@@ -347,6 +514,7 @@ public class CalendarProjektApp extends Application {
         dialog.setTitle("Neuer Termin");
         ButtonType saveType = new ButtonType("Speichern", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+        applyThemeToDialog(dialog.getDialogPane());
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -383,6 +551,7 @@ public class CalendarProjektApp extends Application {
                 Alert a = new Alert(AlertType.WARNING, "Bitte Titel angeben und gültige Zeiten im Format HH:mm eingeben. Ende muss nach Start liegen.", ButtonType.OK);
                 a.initOwner(owner);
                 a.setHeaderText("Eingaben prüfen");
+                applyThemeToDialog(a.getDialogPane());
                 a.showAndWait();
                 return;
             }
@@ -428,6 +597,21 @@ public class CalendarProjektApp extends Application {
         }
     }
 
+    private void applyThemeToDialog(javafx.scene.control.DialogPane pane) {
+        if (pane == null) return;
+        try {
+            String darkCss = getClass().getResource("/dark.css").toExternalForm();
+            var sheets = pane.getStylesheets();
+            sheets.remove(darkCss);
+            if (ConfigUtil.isDarkMode()) {
+                sheets.add(darkCss);
+            }
+            System.out.println("[DEBUG_LOG] Dialog stylesheets: " + sheets + ", darkMode=" + ConfigUtil.isDarkMode());
+        } catch (Exception e) {
+            System.out.println("[DEBUG_LOG] dark.css not found for dialog: " + e.getMessage());
+        }
+    }
+
     private void applyTheme(Scene scene) {
         if (scene == null) return;
         try {
@@ -437,8 +621,9 @@ public class CalendarProjektApp extends Application {
             if (ConfigUtil.isDarkMode()) {
                 stylesheets.add(darkCss);
             }
-        } catch (Exception ignored) {
-            // ignore if stylesheet not found
+            System.out.println("[DEBUG_LOG] Applied Scene stylesheets: " + stylesheets + ", darkMode=" + ConfigUtil.isDarkMode());
+        } catch (Exception e) {
+            System.out.println("[DEBUG_LOG] dark.css not found for scene: " + e.getMessage());
         }
     }
 

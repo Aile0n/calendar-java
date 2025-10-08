@@ -64,6 +64,7 @@ The application window will open with a CalendarFX view and a toolbar with:
 - Neuer Termin: create a new event
 - Importieren (ICS/VCS): import events from .ics or .vcs
 - Exportieren (ICS/VCS): export current events to .ics or .vcs
+- Abonnieren (ICS-Feed): subscribe to an online calendar feed (URL to .ics) with periodic refresh
 
 
 ## Configuration
@@ -147,8 +148,9 @@ There is no dedicated Maven JavaFX run plugin configured. TODO: Add `javafx-mave
 
 
 ## License
-TODO: Add a LICENSE file and specify the license here.
+This project is licensed under the MIT License. See the LICENSE file for details.
 
+For the licenses of third‑party dependencies used by this project, see THIRD-PARTY-NOTICES.md.
 
 ## Acknowledgements
 - CalendarFX (https://dlsc.com/products/calendarfx/)

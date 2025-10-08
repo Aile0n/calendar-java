@@ -36,6 +36,10 @@ public class CalendarProjektController implements Initializable {
     @FXML private Button importButton;
     @FXML private Button exportButton;
     @FXML private Button settingsButton;
+    @FXML private Button subscribeButton;
+
+    private final java.util.Map<String, Calendar> feedCalendars = new java.util.HashMap<>();
+    private final java.util.Map<String, javafx.animation.Timeline> feedTimers = new java.util.HashMap<>();
 
     private CalendarView calendarView;
     private final Calendar fxCalendar = new Calendar("Allgemein");
@@ -68,9 +72,14 @@ public class CalendarProjektController implements Initializable {
         importButton.setOnAction(this::onImport);
         exportButton.setOnAction(this::onExport);
         settingsButton.setOnAction(this::onSettings);
+        if (subscribeButton != null) {
+            subscribeButton.setOnAction(this::onSubscribe);
+        }
 
         // Load initial data (default ICS)
         reloadData();
+        // Restore feed subscriptions
+        restoreFeedsFromConfig();
     }
 
     private void reloadData() {
@@ -141,6 +150,7 @@ public class CalendarProjektController implements Initializable {
         dialog.setTitle("Neuer Termin");
         ButtonType saveType = new ButtonType("Speichern", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+        applyThemeToDialog(dialog.getDialogPane());
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -317,6 +327,7 @@ public class CalendarProjektController implements Initializable {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Einstellungen");
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        applyThemeToDialog(dialog.getDialogPane());
 
         ToggleGroup group = new ToggleGroup();
         RadioButton rbIcs = new RadioButton("Speichern als ICS");
@@ -381,6 +392,7 @@ public class CalendarProjektController implements Initializable {
         alert.setTitle("Fehler");
         alert.setHeaderText(header);
         alert.setContentText(ex.getMessage());
+        applyThemeToDialog(alert.getDialogPane());
         alert.showAndWait();
     }
 
@@ -389,9 +401,20 @@ public class CalendarProjektController implements Initializable {
         var stylesheets = calendarContainer.getScene().getStylesheets();
         String darkCss = getClass().getResource("/dark.css").toExternalForm();
         stylesheets.remove(darkCss);
-        if (ConfigUtil.isDarkMode()) {
-            stylesheets.add(darkCss);
-        }
+        // Force-apply dark stylesheet to verify loading and eliminate white areas
+        stylesheets.add(darkCss);
+        System.out.println("[DEBUG_LOG] Applied Scene stylesheets: " + stylesheets);
+    }
+
+    private void applyThemeToDialog(DialogPane pane) {
+        if (pane == null) return;
+        try {
+            String darkCss = getClass().getResource("/dark.css").toExternalForm();
+            pane.getStylesheets().remove(darkCss);
+            // Apply unconditionally to ensure dialogs are dark (even before toggle is saved)
+            pane.getStylesheets().add(darkCss);
+            System.out.println("[DEBUG_LOG] Dialog stylesheets: " + pane.getStylesheets());
+        } catch (Exception ignored) {}
     }
     private String buildRRule(String choice, String countText) {
         if (choice == null || choice.equals("Keine")) return null;
@@ -437,9 +460,121 @@ public class CalendarProjektController implements Initializable {
                 if (notified.add(key)) {
                     Alert a = new Alert(Alert.AlertType.INFORMATION, "In "+mins+" Minuten: " + ce.getTitle(), ButtonType.OK);
                     a.setHeaderText("Erinnerung");
+                    applyThemeToDialog(a.getDialogPane());
                     a.show();
                 }
             }
+        }
+    }
+
+    // -------------------- ICS Feed subscription --------------------
+    private void onSubscribe(ActionEvent evt) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("ICS-Feed abonnieren");
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        applyThemeToDialog(dialog.getDialogPane());
+
+        TextField urlField = new TextField();
+        urlField.setPromptText("https://…/calendar.ics");
+        TextField refreshField = new TextField(Integer.toString(Math.max(1, ConfigUtil.getFeedRefreshMinutes())));
+        refreshField.setPromptText("Aktualisierung (Minuten)");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setStyle("-fx-padding: 10;");
+        grid.add(new Label("Feed-URL:"), 0, 0);
+        grid.add(urlField, 1, 0);
+        grid.add(new Label("Aktualisierung (Minuten):"), 0, 1);
+        grid.add(refreshField, 1, 1);
+        dialog.getDialogPane().setContent(grid);
+
+        Optional<ButtonType> res = dialog.showAndWait();
+        if (res.isPresent() && res.get() == ButtonType.OK) {
+            String url = urlField.getText() == null ? "" : urlField.getText().trim();
+            int minutes = 60;
+            try { minutes = Integer.parseInt(refreshField.getText().trim()); } catch (Exception ignore) {}
+            if (minutes <= 0) minutes = 60;
+            if (!url.isEmpty()) {
+                subscribeToFeed(url, minutes);
+                // persist
+                List<String> urls = new ArrayList<>(ConfigUtil.getFeedUrls());
+                if (!urls.contains(url)) urls.add(url);
+                ConfigUtil.setFeedUrls(urls);
+                ConfigUtil.setFeedRefreshMinutes(minutes);
+                try { ConfigUtil.save(); } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    private void restoreFeedsFromConfig() {
+        List<String> urls = ConfigUtil.getFeedUrls();
+        int minutes = ConfigUtil.getFeedRefreshMinutes();
+        for (String u : urls) {
+            subscribeToFeed(u, minutes);
+        }
+    }
+
+    private void subscribeToFeed(String url, int refreshMinutes) {
+        Calendar feedCal = feedCalendars.get(url);
+        if (feedCal == null) {
+            feedCal = new Calendar(extractCalendarName(url));
+            Calendar.Style[] styles = Calendar.Style.values();
+            feedCal.setStyle(styles[Math.abs(url.hashCode()) % styles.length]);
+            // add to calendar source
+            CalendarSource source = calendarView.getCalendarSources().get(0);
+            if (!source.getCalendars().contains(feedCal)) {
+                source.getCalendars().add(feedCal);
+            }
+            feedCalendars.put(url, feedCal);
+        }
+        // immediate refresh
+        refreshFeed(url);
+        // schedule refresh
+        javafx.animation.Timeline old = feedTimers.get(url);
+        if (old != null) old.stop();
+        javafx.animation.Timeline tl = new javafx.animation.Timeline(
+                new javafx.animation.KeyFrame(javafx.util.Duration.minutes(refreshMinutes), e -> refreshFeed(url))
+        );
+        tl.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        tl.play();
+        feedTimers.put(url, tl);
+    }
+
+    private void refreshFeed(String url) {
+        Calendar feedCal = feedCalendars.get(url);
+        if (feedCal == null) return;
+        try {
+            List<CalendarEntry> items = IcsUtil.importIcsFromUrl(url);
+            // clear and repopulate feed calendar only
+            feedCal.clear();
+            for (CalendarEntry ce : items) {
+                Entry<String> entry = new Entry<>(ce.getTitle());
+                if (ce.getDescription() != null && !ce.getDescription().isBlank()) {
+                    entry.setLocation(ce.getDescription());
+                }
+                entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
+                if (ce.getRecurrenceRule() != null && !ce.getRecurrenceRule().isBlank()) {
+                    try { entry.setRecurrenceRule(ce.getRecurrenceRule()); } catch (Exception ignored) {}
+                }
+                feedCal.addEntry(entry);
+            }
+        } catch (Exception ex) {
+            // Show one-time alert? Keep minimal: log to UI alert
+            showError("Aktualisieren des Feeds fehlgeschlagen: " + url, ex);
+        }
+    }
+
+    private String extractCalendarName(String url) {
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            String host = uri.getHost();
+            String path = uri.getPath();
+            String base = (host != null ? host : "Feed") + (path != null ? path.substring(path.lastIndexOf('/')+1) : "");
+            if (base.isBlank()) base = "Feed";
+            return "Feed: " + base;
+        } catch (Exception e) {
+            return "Feed";
         }
     }
 }

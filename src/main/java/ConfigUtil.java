@@ -4,7 +4,11 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  * Zentrale Konfigurationsverwaltung für die Anwendung.
@@ -52,6 +56,12 @@ public class ConfigUtil {
         if (p.getProperty("ui.darkMode") == null) {
             p.setProperty("ui.darkMode", "false");
         }
+        if (p.getProperty("feeds.urls") == null) {
+            p.setProperty("feeds.urls", "");
+        }
+        if (p.getProperty("feeds.refreshMinutes") == null) {
+            p.setProperty("feeds.refreshMinutes", "60");
+        }
         // keep backward compatibility: ignore legacy calendar.style if present
         props = p;
     }
@@ -96,5 +106,38 @@ public class ConfigUtil {
 
     public static void setDarkMode(boolean dark) {
         props.setProperty("ui.darkMode", Boolean.toString(dark));
+    }
+
+    // ---- Feed subscription settings ----
+    public static List<String> getFeedUrls() {
+        String raw = props.getProperty("feeds.urls", "");
+        if (raw.isBlank()) return new ArrayList<>();
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    public static void setFeedUrls(List<String> urls) {
+        String joined = urls == null ? "" : urls.stream()
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .distinct()
+                .collect(Collectors.joining(","));
+        props.setProperty("feeds.urls", joined);
+    }
+
+    public static int getFeedRefreshMinutes() {
+        try {
+            return Integer.parseInt(props.getProperty("feeds.refreshMinutes", "60").trim());
+        } catch (Exception e) {
+            return 60;
+        }
+    }
+
+    public static void setFeedRefreshMinutes(int minutes) {
+        if (minutes <= 0) minutes = 60;
+        props.setProperty("feeds.refreshMinutes", Integer.toString(minutes));
     }
 }
