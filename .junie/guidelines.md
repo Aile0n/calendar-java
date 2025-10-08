@@ -10,6 +10,9 @@ The UI is localized in German and provides a toolbar with actions:
 - Neuer Termin: create a new event
 - Importieren (ICS/VCS): import events from .ics or .vcs
 - Exportieren (ICS/VCS): export current events to .ics or .vcs
+- Abonnieren (ICS-Feed): subscribe to an online .ics URL with periodic refresh (where implemented)
+
+For a beginner-friendly walkthrough of the codebase, see CODE_EXPLANATION.md.
 
 ### Tech stack
 - Java 21, Maven
@@ -43,4 +46,4 @@ Config is handled via config.properties (external file in working directory, wit
 - ics.path: path to ICS file when in ICS mode (default: calendar.ics)
 - db.url: JDBC URL for the database (default: jdbc:sqlite:calendar.db)
 
-For more details, see the project README.md.
+For more details, see the project README.md and CODE_EXPLANATION.md.

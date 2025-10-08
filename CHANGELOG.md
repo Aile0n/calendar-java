@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.1.1] - 2025-10-08
+
+### Added
+- CODE_EXPLANATION.md: beginner-friendly overview of the codebase and main flows.
+- Light inline comments across key classes (controller, DAO, utilities, launcher) to help starters.
+
+### Changed
+- README: clarified setup/run instructions and added a link to the code explanation document.
+- Guidelines: aligned with current features and referenced CODE_EXPLANATION.md.
+
 ## [0.1.0] - 2025-09-30
 
 ### Added
