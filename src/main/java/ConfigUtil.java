@@ -4,140 +4,157 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 /**
- * Zentrale Konfigurationsverwaltung für die Anwendung.
- * Liest und schreibt Einstellungen wie Speicher-Modus (ICS/DB) und Pfade
- * aus/zu einer Properties-Datei (config.properties).
+ * Central configuration helper.
+ *
+ * <p>The application stores its settings in {@code config.properties} next to the
+ * working directory. If the file is missing, a default one will be created
+ * automatically. The most important setting is the path to the calendar ICS
+ * file which will also be created automatically when necessary.</p>
  */
-public class ConfigUtil {
-    public enum StorageMode { ICS, DB }
+public final class ConfigUtil {
+    private static final String CONFIG_FILE_NAME = "config.properties";
+    private static final String KEY_ICS_PATH = "ics.path";
+    private static final String KEY_DARK_MODE = "ui.darkMode";
 
-    private static final String FILE_NAME = "config.properties"; // prefer working directory
-
-    private static Properties props;
-    private static Path externalConfigPath = Paths.get(FILE_NAME);
+    private static final Properties props = new Properties();
+    private static final Path configPath = Paths.get(CONFIG_FILE_NAME).toAbsolutePath();
 
     static {
         load();
     }
 
+    private ConfigUtil() {}
+
     public static synchronized void load() {
-        Properties p = new Properties();
-        boolean loaded = false;
-        // Try external file first
-        if (Files.exists(externalConfigPath)) {
-            try (FileInputStream fis = new FileInputStream(externalConfigPath.toFile())) {
-                p.load(fis);
-                loaded = true;
-            } catch (Exception ignored) {}
-        }
-        // Fallback to classpath resource
-        if (!loaded) {
-            try (InputStream is = ConfigUtil.class.getClassLoader().getResourceAsStream(FILE_NAME)) {
+        props.clear();
+        boolean loadedFromFile = false;
+        if (Files.exists(configPath)) {
+            try (FileInputStream fis = new FileInputStream(configPath.toFile())) {
+                props.load(fis);
+                loadedFromFile = true;
+            } catch (Exception ignored) {
+                // Fallback to defaults below.
+            }
+        } else {
+            try (InputStream is = ConfigUtil.class.getClassLoader().getResourceAsStream(CONFIG_FILE_NAME)) {
                 if (is != null) {
-                    p.load(is);
-                    loaded = true;
+                    props.load(is);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                // Fallback to defaults below.
+            }
         }
-        // Defaults
-        if (p.getProperty("storage.mode") == null) {
-            p.setProperty("storage.mode", "ICS");
+
+        ensureDefaults();
+
+        if (!loadedFromFile) {
+            try {
+                save();
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to initialize configuration", e);
+            }
         }
-        if (p.getProperty("ics.path") == null) {
-            p.setProperty("ics.path", "calendar.ics");
+    }
+
+    private static void ensureDefaults() {
+        String rawPath = props.getProperty(KEY_ICS_PATH);
+        Path calendarPath;
+        if (rawPath == null || rawPath.isBlank()) {
+            calendarPath = locateInitialCalendar();
+            props.setProperty(KEY_ICS_PATH, calendarPath.toString());
+        } else {
+            calendarPath = Paths.get(rawPath.trim()).toAbsolutePath().normalize();
+            props.setProperty(KEY_ICS_PATH, calendarPath.toString());
         }
-        if (p.getProperty("ui.darkMode") == null) {
-            p.setProperty("ui.darkMode", "false");
+
+        if (props.getProperty(KEY_DARK_MODE) == null) {
+            props.setProperty(KEY_DARK_MODE, "false");
         }
-        if (p.getProperty("feeds.urls") == null) {
-            p.setProperty("feeds.urls", "");
+
+        ensureCalendarFileExists(calendarPath);
+    }
+
+    private static Path locateInitialCalendar() {
+        Path base = determineApplicationDirectory();
+        Path candidate = base.resolve("calendar.ics");
+        if (Files.exists(candidate)) {
+            return candidate.toAbsolutePath().normalize();
         }
-        if (p.getProperty("feeds.refreshMinutes") == null) {
-            p.setProperty("feeds.refreshMinutes", "60");
+        Path workingDirCandidate = Paths.get("calendar.ics").toAbsolutePath().normalize();
+        if (Files.exists(workingDirCandidate)) {
+            return workingDirCandidate;
         }
-        // keep backward compatibility: ignore legacy calendar.style if present
-        props = p;
+        return candidate.toAbsolutePath().normalize();
+    }
+
+    private static Path determineApplicationDirectory() {
+        try {
+            var codeSource = ConfigUtil.class.getProtectionDomain().getCodeSource();
+            if (codeSource != null && codeSource.getLocation() != null) {
+                Path location = Paths.get(codeSource.getLocation().toURI());
+                if (Files.isDirectory(location)) {
+                    return location.toAbsolutePath();
+                }
+                Path parent = location.getParent();
+                if (parent != null) {
+                    return parent.toAbsolutePath();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return Paths.get("").toAbsolutePath();
+    }
+
+    private static void ensureCalendarFileExists(Path calendarPath) {
+        try {
+            if (calendarPath.getParent() != null) {
+                Files.createDirectories(calendarPath.getParent());
+            }
+            if (!Files.exists(calendarPath)) {
+                IcsUtil.exportIcs(calendarPath, java.util.List.of());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create calendar file at " + calendarPath, e);
+        }
     }
 
     public static synchronized void save() throws Exception {
-        if (!Files.exists(externalConfigPath)) {
-            Files.createFile(externalConfigPath);
+        if (configPath.getParent() != null) {
+            Files.createDirectories(configPath.getParent());
         }
-        try (FileOutputStream fos = new FileOutputStream(externalConfigPath.toFile())) {
+        try (FileOutputStream fos = new FileOutputStream(configPath.toFile())) {
             props.store(fos, "Application configuration");
         }
     }
 
-    public static StorageMode getStorageMode() {
-        String mode = props.getProperty("storage.mode", "ICS").trim().toUpperCase();
-        try {
-            return StorageMode.valueOf(mode);
-        } catch (Exception e) {
-            return StorageMode.ICS;
-        }
+    public static synchronized Path getIcsPath() {
+        return Paths.get(props.getProperty(KEY_ICS_PATH)).toAbsolutePath().normalize();
     }
 
-    public static void setStorageMode(StorageMode mode) {
-        props.setProperty("storage.mode", mode.name());
+    public static synchronized void setIcsPath(Path path) throws Exception {
+        Path normalized = path.toAbsolutePath().normalize();
+        ensureCalendarFileExists(normalized);
+        props.setProperty(KEY_ICS_PATH, normalized.toString());
     }
 
-    public static Path getIcsPath() {
-        return Paths.get(props.getProperty("ics.path", "calendar.ics"));
+    public static synchronized Path ensureCalendarFile() {
+        Path path = getIcsPath();
+        ensureCalendarFileExists(path);
+        return path;
     }
 
-    public static void setIcsPath(Path path) {
-        props.setProperty("ics.path", path.toString());
+    public static synchronized boolean isDarkMode() {
+        return Boolean.parseBoolean(props.getProperty(KEY_DARK_MODE, "false"));
     }
 
-    public static String getDbUrl() {
+    public static synchronized void setDarkMode(boolean darkMode) {
+        props.setProperty(KEY_DARK_MODE, Boolean.toString(darkMode));
+    }
+
+    public static synchronized String getDbUrl() {
         return props.getProperty("db.url");
-    }
-
-    public static boolean isDarkMode() {
-        return Boolean.parseBoolean(props.getProperty("ui.darkMode", "false"));
-    }
-
-    public static void setDarkMode(boolean dark) {
-        props.setProperty("ui.darkMode", Boolean.toString(dark));
-    }
-
-    // ---- Feed subscription settings ----
-    public static List<String> getFeedUrls() {
-        String raw = props.getProperty("feeds.urls", "");
-        if (raw.isBlank()) return new ArrayList<>();
-        return Arrays.stream(raw.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .distinct()
-                .collect(Collectors.toList());
-    }
-
-    public static void setFeedUrls(List<String> urls) {
-        String joined = urls == null ? "" : urls.stream()
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .distinct()
-                .collect(Collectors.joining(","));
-        props.setProperty("feeds.urls", joined);
-    }
-
-    public static int getFeedRefreshMinutes() {
-        try {
-            return Integer.parseInt(props.getProperty("feeds.refreshMinutes", "60").trim());
-        } catch (Exception e) {
-            return 60;
-        }
-    }
-
-    public static void setFeedRefreshMinutes(int minutes) {
-        if (minutes <= 0) minutes = 60;
-        props.setProperty("feeds.refreshMinutes", Integer.toString(minutes));
     }
 }

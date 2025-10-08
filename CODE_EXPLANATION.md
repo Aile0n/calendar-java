@@ -4,9 +4,9 @@ This document explains the main parts of the Calendar Java project and how data 
 
 ## Big Picture
 - UI: JavaFX + CalendarFX provide the window, buttons, and calendar view.
-- Data: Events (CalendarEntry) are either stored in an ICS file or in an SQLite database.
+- Data: Events (CalendarEntry) are stored in a single ICS file. Legacy database helpers are kept in a separate utility for future reuse.
 - Import/Export: ICS (via ical4j) and basic VCS are supported.
-- Config: A `config.properties` file controls storage mode and paths.
+- Config: A `config.properties` file controls the ICS file path and dark mode.
 
 The app starts via a small launcher (org.example.Main) that ensures JavaFX can be started reliably from the shaded JAR.
 
@@ -17,26 +17,27 @@ The app starts via a small launcher (org.example.Main) that ensures JavaFX can b
 
 - CalendarProjektApp (JavaFX Application)
   - A programmatic JavaFX application that builds the UI in code (toolbar + CalendarFX view). It shows how to:
-    - Load entries, depending on the storage mode.
-    - Create new events.
+    - Load entries from the configured ICS file.
+    - Auto-save on changes and offer a manual “Beenden & Speichern”.
     - Import/export ICS/VCS files.
-    - Open a small settings dialog to switch between ICS and DB storage and choose the ICS path.
+    - Open a small settings dialog to select the ICS path and toggle dark mode.
   - Note: The project also contains an FXML-based UI (CalendarProjektController + calendar_view.fxml). You can use either approach; the launcher currently starts `CalendarProjektApp`.
 
 - CalendarProjektController (FXML Controller)
   - An alternative UI that wires buttons defined in `src/main/resources/calendar_view.fxml`.
-  - Connects UI actions (new, import, export, settings, subscribe) to logic.
-  - Uses the same data model and utilities as `CalendarProjektApp`.
+  - Connects UI actions (new, import, export, settings, exit & save) to the same logic used by `CalendarProjektApp`.
 
 - CalendarEntry (domain model)
   - Represents a calendar event: id (optional), title, description, start/end times, optional recurrence rule, reminder minutes, and category.
 
 - CalendarEntryDAO (database access)
-  - CRUD operations for SQLite: save, findAll, update, delete.
-  - Uses `DatabaseUtil` for the connection.
+  - Legacy CRUD wrapper kept for compatibility; now delegates to `DbStorage`.
 
 - DatabaseUtil (database helper)
-  - Reads the DB URL, initializes the database schema if needed, and provides a `getConnection()` method used by the DAO.
+  - Deprecated thin wrapper around `DbStorage` for older code that still calls `DatabaseUtil.getConnection()`.
+
+- DbStorage (database helper)
+  - Encapsulates all SQL access logic. Not used by the UI anymore, but retained for potential future reuse.
 
 - IcsUtil (import/export helper)
   - ICS: Uses ical4j to parse and generate `.ics` files with full RFC 5545 compliance (including UID generation).
@@ -45,41 +46,39 @@ The app starts via a small launcher (org.example.Main) that ensures JavaFX can b
   - Includes comprehensive validation and error handling for malformed files.
 
 - ConfigUtil (configuration)
-  - Reads/writes user settings, with preference for an external `config.properties` in the working directory (falls back to the classpath default if missing).
-  - Keys: `storage.mode=ICS|DB`, `ics.path=calendar.ics`, `db.url=jdbc:sqlite:calendar.db`, and a few optional UI/feed settings.
+  - Reads/writes user settings, preferring an external `config.properties` in the working directory.
+  - Keys: `ics.path` and `ui.darkMode`. Automatically creates `config.properties` and an empty `calendar.ics` when missing.
 
 ## Data Flow
 1. Startup
    - `org.example.Main` calls `Application.launch` for `CalendarProjektApp`.
-   - `CalendarProjektApp` builds the UI and loads entries depending on `ConfigUtil.getStorageMode()`.
+   - `CalendarProjektApp` builds the UI and loads entries from `ConfigUtil.ensureCalendarFile()`.
 
 2. Loading Data
-   - ICS mode: `IcsUtil.importIcs` reads from the configured path (`ConfigUtil.getIcsPath()`), producing `List<CalendarEntry>`.
-   - DB mode: `CalendarEntryDAO.findAll()` queries SQLite and maps rows to `CalendarEntry` objects.
-   - The resulting entries are shown in the CalendarFX view.
+   - `IcsUtil.importIcs` reads from the configured path, producing `List<CalendarEntry>`.
+   - The resulting entries populate CalendarFX calendars (one per category, if present).
 
 3. Creating/Editing
-   - The UI shows a simple dialog to create a new event (title, dates).
-   - In DB mode it saves via `CalendarEntryDAO.save`.
-   - In ICS mode, entries live in memory, and you can export them back to an ICS file.
+   - The UI shows a simple dialog to create a new event (title, start/end).
+   - Saved entries are appended to the in-memory list and immediately written back to the ICS file.
 
 4. Import/Export
-   - Import: `IcsUtil.importAuto` detects `.vcs` vs `.ics` and returns entries.
-   - Export: `IcsUtil.exportIcs` or `IcsUtil.exportVcs` writes a list of entries to a file.
+   - Import: `IcsUtil.importAuto` detects `.vcs` vs `.ics`, merges into the in-memory list, and auto-saves.
+   - Export: `IcsUtil.exportIcs` or `IcsUtil.exportVcs` writes the current entries to a user-selected file.
 
 5. Configuration
    - `ConfigUtil` prefers an external `config.properties` in the working dir for user changes.
-   - When the settings dialog is confirmed, `ConfigUtil.save()` writes the file.
+   - When the settings dialog is confirmed, `ConfigUtil.save()` writes the file and a new calendar path is created if necessary.
 
 ## Where to Start Reading the Code
 - If you want to understand startup and UI flow: open `org/example/Main.java` then `CalendarProjektApp.java`.
-- If you want to understand persistence: open `CalendarEntry.java`, `DatabaseUtil.java`, and `CalendarEntryDAO.java`.
+- If you want to understand persistence: open `CalendarEntry.java`, `ConfigUtil.java`, and `IcsUtil.java` (for ICS). `DbStorage` contains the optional database helper.
 - If you want to understand ICS/VCS import/export: open `IcsUtil.java` and the unit test `src/test/java/IcsUtilTest.java`.
 
 ## Tips for Beginners
 - Search for TODO comments and method-level Javadoc to find extension points.
 - Start by running `mvn clean package` and then `java -jar target/<shaded-jar>.jar`.
-- Change storage mode in the app and observe how the source of truth switches between DB and ICS.
+- Explore the settings dialog to see how the ICS path and dark mode are persisted.
 
 ## Glossary
 - JavaFX: Java’s UI framework for desktop apps.
