@@ -134,7 +134,7 @@ public class IcsUtil {
                 alarm.getProperties().add(Action.DISPLAY);
                 alarm.getProperties().add(new net.fortuna.ical4j.model.property.Description("Erinnerung"));
                 alarm.getProperties().add(new Trigger(new Dur(0, 0, -m, 0)));
-                ev.getAlarms().add(alarm);
+                ev.getComponents().add(alarm);
             }
             calendar.getComponents().add(ev);
         }
