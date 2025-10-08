@@ -15,11 +15,18 @@ import net.fortuna.ical4j.model.property.Trigger;
 import net.fortuna.ical4j.model.Dur;
 import net.fortuna.ical4j.util.RandomUidGenerator;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -45,8 +52,12 @@ public class IcsUtil {
     }
 
     private static List<CalendarEntry> importIcs(InputStream is) throws Exception {
+        byte[] sanitized = sanitizeIcsStream(is);
         CalendarBuilder builder = new CalendarBuilder();
-        Calendar calendar = builder.build(is);
+        Calendar calendar;
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(sanitized)) {
+            calendar = builder.build(bais);
+        }
         List<CalendarEntry> entries = new ArrayList<>();
         for (var component : calendar.getComponents(Component.VEVENT)) {
             VEvent ev = (VEvent) component;
@@ -88,6 +99,29 @@ public class IcsUtil {
             entries.add(ce);
         }
         return entries;
+    }
+
+    private static byte[] sanitizeIcsStream(InputStream is) throws Exception {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(baos, StandardCharsets.UTF_8))) {
+            String line;
+            boolean firstLine = true;
+            while ((line = reader.readLine()) != null) {
+                boolean foldedContinuation = !line.isEmpty() && (line.charAt(0) == ' ' || line.charAt(0) == '\t');
+                if (line.isEmpty() || (line.trim().isEmpty() && !foldedContinuation)) {
+                    continue;
+                }
+                if (!firstLine) {
+                    writer.write("\r\n");
+                } else {
+                    firstLine = false;
+                }
+                writer.write(line);
+            }
+            writer.flush();
+            return baos.toByteArray();
+        }
     }
 
     public static void exportIcs(Path path, List<CalendarEntry> entries) throws Exception {

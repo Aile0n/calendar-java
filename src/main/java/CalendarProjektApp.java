@@ -1,78 +1,101 @@
+import com.calendarfx.model.Calendar;
+import com.calendarfx.model.CalendarSource;
+import com.calendarfx.model.Entry;
+import com.calendarfx.view.CalendarView;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
-import com.calendarfx.view.CalendarView;
-import com.calendarfx.model.CalendarSource;
-import com.calendarfx.model.Calendar;
-import com.calendarfx.model.Entry;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBase;
-import javafx.scene.control.Tooltip;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Dialog;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
-import javafx.scene.control.ToolBar;
-import javafx.scene.control.CheckBox;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.VBox;
 import javafx.scene.layout.Priority;
-import javafx.stage.Modality;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.List;
-import java.util.Optional;
 import java.util.ArrayList;
-import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
- * Hauptanwendung des Projekts. Startet die JavaFX-Oberfläche, lädt Termine
- * aus der konfigurierten Quelle (Datenbank oder ICS) und stellt Funktionen wie
- * Import/Export, Einstellungen sowie eine Info-Anzeige bereit. Außerdem wird die
- * Oberfläche auf Deutsch lokalisiert.
+ * Hauptanwendung des Projekts. Zeigt einen CalendarFX-Kalender, lädt und speichert
+ * Termine automatisch in eine ICS-Datei und bietet Import/Export sowie
+ * Einstellungen und einen manuellen "Beenden & Speichern"-Knopf.
  */
 public class CalendarProjektApp extends Application {
-    private final CalendarEntryDAO dao = new CalendarEntryDAO();
+
     private final Calendar fxCalendar = new Calendar("Termine");
-    private final java.util.List<CalendarEntry> currentEntries = new ArrayList<>();
+    private final Map<String, Calendar> categoryCalendars = new HashMap<>();
+    private final List<CalendarEntry> currentEntries = new ArrayList<>();
+    private CalendarSource mainSource;
+    private Path calendarFile;
 
     @Override
     public void start(Stage primaryStage) {
-        // Locale auf Deutsch setzen, bevor UI erzeugt wird
-        java.util.Locale.setDefault(java.util.Locale.GERMANY);
-        java.util.Locale.setDefault(java.util.Locale.Category.FORMAT, java.util.Locale.GERMANY);
+        Locale.setDefault(Locale.GERMANY);
+        Locale.setDefault(Locale.Category.FORMAT, Locale.GERMANY);
+
+        calendarFile = ConfigUtil.ensureCalendarFile();
 
         CalendarView calendarView = new CalendarView();
-
-        // Add calendar source and our calendar
         CalendarSource source = new CalendarSource("Meine Kalender");
         source.getCalendars().add(fxCalendar);
         calendarView.getCalendarSources().add(source);
+        mainSource = source;
 
-        // Load entries from DB into the CalendarFX calendar
-        loadFromDatabase();
+        reloadFromStorage();
 
-        // Create a custom toolbar
         ToolBar toolBar = new ToolBar();
+        toolBar.getItems().add(buildSettingsButton(primaryStage));
 
-        // Settings button
+        Button createButton = new Button("Neuer Termin");
+        createButton.setOnAction(e -> showCreateDialog(primaryStage));
+        toolBar.getItems().add(createButton);
+
+        Button importButton = new Button("Importieren (ICS/VCS)");
+        importButton.setOnAction(e -> doImport(primaryStage));
+        toolBar.getItems().add(importButton);
+
+        Button exportButton = new Button("Exportieren (ICS/VCS)");
+        exportButton.setOnAction(e -> doExport(primaryStage));
+        toolBar.getItems().add(exportButton);
+
+        Button exitButton = new Button("Beenden & Speichern");
+        exitButton.setOnAction(e -> exitAndSave());
+        toolBar.getItems().add(exitButton);
+
+        Button infoButton = new Button("Info");
+        infoButton.setTooltip(new Tooltip("Informationen zu Bibliotheken und Autor"));
+        infoButton.setOnAction(e -> showInfoDialog(primaryStage));
+        ToolBar footer = new ToolBar(infoButton);
+
+        VBox root = new VBox(toolBar, calendarView, footer);
+        VBox.setVgrow(calendarView, Priority.ALWAYS);
+
+        Scene scene = new Scene(root, 1000, 700);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("CalendarProjekt");
+        applyTheme(scene);
+        primaryStage.show();
+
+        Platform.runLater(() -> localizeNode(root));
+    }
+
+    private Button buildSettingsButton(Stage owner) {
         Button settingsButton = new Button();
         settingsButton.setTooltip(new Tooltip("Einstellungen"));
-
         var iconUrl = getClass().getResource("/icons/settings.png");
         if (iconUrl != null) {
             ImageView iv = new ImageView(new Image(iconUrl.toExternalForm()));
@@ -89,143 +112,112 @@ public class CalendarProjektApp extends Application {
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
             applyThemeToDialog(dialog.getDialogPane());
 
-            javafx.scene.control.ToggleGroup group = new javafx.scene.control.ToggleGroup();
-            javafx.scene.control.RadioButton rbIcs = new javafx.scene.control.RadioButton("Speichern als ICS");
-            javafx.scene.control.RadioButton rbDb = new javafx.scene.control.RadioButton("Speichern in Datenbank");
-            rbIcs.setToggleGroup(group);
-            rbDb.setToggleGroup(group);
-            rbIcs.setSelected(ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.ICS);
-            rbDb.setSelected(ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB);
-
             TextField icsPathField = new TextField(ConfigUtil.getIcsPath().toString());
             Button browse = new Button("…");
             browse.setOnAction(ev -> {
-                FileChooser chooser2 = new FileChooser();
-                chooser2.setInitialFileName(icsPathField.getText().isBlank() ? "calendar.ics" : icsPathField.getText());
-                File f = chooser2.showSaveDialog(((Button) ev.getSource()).getScene().getWindow());
-                if (f != null) icsPathField.setText(f.getAbsolutePath());
+                FileChooser chooser = new FileChooser();
+                chooser.setInitialFileName("calendar.ics");
+                File f = chooser.showSaveDialog(dialog.getDialogPane().getScene().getWindow());
+                if (f != null) {
+                    icsPathField.setText(f.getAbsolutePath());
+                }
             });
+
+            CheckBox darkMode = new CheckBox("Dunkelmodus");
+            darkMode.setSelected(ConfigUtil.isDarkMode());
 
             GridPane grid = new GridPane();
             grid.setHgap(10);
             grid.setVgap(10);
             grid.setStyle("-fx-padding: 10;");
-            grid.add(new Label("Speicher-Modus:"), 0, 0);
-            grid.add(rbIcs, 1, 0);
-            grid.add(rbDb, 2, 0);
-            grid.add(new Label("ICS-Datei:"), 0, 1);
-            grid.add(icsPathField, 1, 1);
-            grid.add(browse, 2, 1);
-
-            // Dark mode toggle
-            Label displayLbl = new Label("Darstellung:");
-            CheckBox darkMode = new CheckBox("Dunkelmodus");
-            darkMode.setSelected(ConfigUtil.isDarkMode());
-            grid.add(displayLbl, 0, 2);
-            grid.add(darkMode, 1, 2);
+            grid.add(new Label("ICS-Datei:"), 0, 0);
+            grid.add(icsPathField, 1, 0);
+            grid.add(browse, 2, 0);
+            grid.add(new Label("Darstellung:"), 0, 1);
+            grid.add(darkMode, 1, 1);
 
             dialog.getDialogPane().setContent(grid);
 
-            var res = dialog.showAndWait();
-            if (res.isPresent() && res.get() == ButtonType.OK) {
-                try {
-                    ConfigUtil.setStorageMode(rbIcs.isSelected() ? ConfigUtil.StorageMode.ICS : ConfigUtil.StorageMode.DB);
-                    if (rbIcs.isSelected()) {
-                        ConfigUtil.setIcsPath(new java.io.File(icsPathField.getText()).toPath());
+            dialog.showAndWait().ifPresent(result -> {
+                if (result == ButtonType.OK) {
+                    try {
+                        ConfigUtil.setIcsPath(Path.of(icsPathField.getText().trim()));
+                        ConfigUtil.setDarkMode(darkMode.isSelected());
+                        ConfigUtil.save();
+                        calendarFile = ConfigUtil.ensureCalendarFile();
+                        applyTheme(owner.getScene());
+                        reloadFromStorage();
+                        Alert alert = new Alert(Alert.AlertType.INFORMATION, "Einstellungen gespeichert.", ButtonType.OK);
+                        alert.setHeaderText(null);
+                        applyThemeToDialog(alert.getDialogPane());
+                        alert.showAndWait();
+                    } catch (Exception ex) {
+                        showError("Konnte Einstellungen nicht speichern", ex);
                     }
-                    // Save dark mode and apply immediately
-                    ConfigUtil.setDarkMode(darkMode.isSelected());
-                    applyTheme(primaryStage.getScene());
-
-                    ConfigUtil.save();
-                    loadFromDatabase();
-                    Alert a = new Alert(Alert.AlertType.INFORMATION, "Einstellungen gespeichert.", ButtonType.OK);
-                    a.setHeaderText(null);
-                    a.showAndWait();
-                } catch (Exception ex) {
-                    showError("Konnte Einstellungen nicht speichern", ex);
                 }
-            }
+            });
         });
 
-        // Create new event button
-        Button createBtn = new Button("Neuer Termin");
-        createBtn.setOnAction(e -> showCreateDialog(primaryStage));
+        return settingsButton;
+    }
 
-        // Import/Export buttons
-        Button importBtn = new Button("Importieren (ICS/VCS)");
-        importBtn.setOnAction(e -> doImport(primaryStage));
-        Button exportBtn = new Button("Exportieren (ICS/VCS)");
-        exportBtn.setOnAction(e -> doExport(primaryStage));
+    private void reloadFromStorage() {
+        fxCalendar.clear();
+        categoryCalendars.values().forEach(Calendar::clear);
+        try {
+            calendarFile = ConfigUtil.ensureCalendarFile();
+            currentEntries.clear();
+            if (Files.exists(calendarFile)) {
+                currentEntries.addAll(IcsUtil.importIcs(calendarFile));
+            }
+            populateCalendar(currentEntries);
+        } catch (Exception ex) {
+            showError("Fehler beim Laden der ICS-Datei", ex);
+        }
+    }
 
-        toolBar.getItems().addAll(settingsButton, createBtn, importBtn, exportBtn);
+    private void populateCalendar(List<CalendarEntry> items) {
+        ZoneId zone = ZoneId.systemDefault();
+        for (CalendarEntry ce : items) {
+            Entry<String> entry = new Entry<>(ce.getTitle());
+            if (ce.getDescription() != null && !ce.getDescription().isBlank()) {
+                entry.setLocation(ce.getDescription());
+            }
+            entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
+            if (ce.getRecurrenceRule() != null && !ce.getRecurrenceRule().isBlank()) {
+                try {
+                    entry.setRecurrenceRule(ce.getRecurrenceRule());
+                } catch (Exception ignored) {
+                }
+            }
+            String category = (ce.getCategory() == null || ce.getCategory().isBlank()) ? "Allgemein" : ce.getCategory();
+            Calendar target = getOrCreateCalendar(category);
+            target.addEntry(entry);
+        }
+    }
 
-        // Place toolbar above calendar view and add footer with Info button
-        Button infoBtn = new Button("Info");
-        infoBtn.setTooltip(new Tooltip("Informationen zu Bibliotheken und Autor"));
-        infoBtn.setOnAction(e -> showInfoDialog(primaryStage));
-        ToolBar footer = new ToolBar(infoBtn);
-
-        VBox root = new VBox(toolBar, calendarView, footer);
-        VBox.setVgrow(calendarView, Priority.ALWAYS);
-
-        Scene scene = new Scene(root, 1000, 700);
-        primaryStage.setScene(scene);
-        applyTheme(scene);
-        primaryStage.setTitle("CalendarProjekt");
-        primaryStage.show();
-
-        // Localize CalendarFX built-in controls (e.g., Today/Day/Week/Month/Year, Search)
-        Platform.runLater(() -> {
-            localizeNode(root);
-            // Periodically look for a sidebar mini calendar (month-view or date-picker) after user expands it
-            javafx.animation.Timeline poll = new javafx.animation.Timeline(
-                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(2), ev -> tryDumpMiniCalendar(root))
-            );
-            poll.setCycleCount(5);
-            poll.play();
-
-            // Also scan headers to learn the exact label classes used for the large date titles
-            javafx.animation.Timeline headerScan = new javafx.animation.Timeline(
-                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(3), ev -> scanHeaderLabels(root))
-            );
-            headerScan.setCycleCount(3);
-            headerScan.play();
+    private Calendar getOrCreateCalendar(String category) {
+        if ("Allgemein".equalsIgnoreCase(category)) {
+            return fxCalendar;
+        }
+        return categoryCalendars.computeIfAbsent(category, key -> {
+            Calendar cal = new Calendar(key);
+            Calendar.Style[] styles = Calendar.Style.values();
+            Calendar.Style style = styles[Math.abs(key.hashCode()) % styles.length];
+            cal.setStyle(style);
+            if (mainSource != null && !mainSource.getCalendars().contains(cal)) {
+                mainSource.getCalendars().add(cal);
+            }
+            return cal;
         });
     }
 
-    private void loadFromDatabase() {
-        fxCalendar.clear();
-        if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
-            try {
-                List<CalendarEntry> items = dao.findAll();
-                ZoneId zone = ZoneId.systemDefault();
-                for (CalendarEntry ce : items) {
-                    Entry<String> entry = new Entry<>(ce.getTitle());
-                    entry.setLocation(ce.getDescription());
-                    entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
-                    fxCalendar.addEntry(entry);
-                }
-            } catch (Exception ex) {
-                showError("Fehler beim Laden aus der Datenbank", ex);
-            }
-        } else {
-            try {
-                currentEntries.clear();
-                var path = ConfigUtil.getIcsPath();
-                if (Files.exists(path)) {
-                    currentEntries.addAll(IcsUtil.importIcs(path));
-                }
-                ZoneId zone = ZoneId.systemDefault();
-                for (CalendarEntry ce : currentEntries) {
-                    Entry<String> entry = new Entry<>(ce.getTitle());
-                    entry.setLocation(ce.getDescription());
-                    entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
-                    fxCalendar.addEntry(entry);
-                }
-            } catch (Exception ex) {
-                showError("Fehler beim Laden aus ICS", ex);
-            }
+    private void persistEntries() {
+        try {
+            ConfigUtil.ensureCalendarFile();
+            IcsUtil.exportIcs(calendarFile, new ArrayList<>(currentEntries));
+        } catch (Exception ex) {
+            showError("Kalender konnte nicht gespeichert werden", ex);
         }
     }
 
@@ -237,18 +229,14 @@ public class CalendarProjektApp extends Application {
         chooser.getExtensionFilters().addAll(all, ics, vcs);
         chooser.setSelectedExtensionFilter(all);
         File file = chooser.showOpenDialog(owner);
-        if (file == null) return;
+        if (file == null) {
+            return;
+        }
         try {
             List<CalendarEntry> imported = IcsUtil.importAuto(file.toPath());
-            if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
-                for (CalendarEntry ce : imported) {
-                    dao.save(ce);
-                }
-            } else {
-                currentEntries.addAll(imported);
-                IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
-            }
-            loadFromDatabase();
+            currentEntries.addAll(imported);
+            persistEntries();
+            reloadFromStorage();
         } catch (Exception ex) {
             showError("Import fehlgeschlagen", ex);
         }
@@ -263,15 +251,11 @@ public class CalendarProjektApp extends Application {
         chooser.getExtensionFilters().addAll(all, ics, vcs);
         chooser.setSelectedExtensionFilter(ics);
         File file = chooser.showSaveDialog(owner);
-        if (file == null) return;
+        if (file == null) {
+            return;
+        }
         try {
-            List<CalendarEntry> items;
-            if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
-                items = dao.findAll();
-            } else {
-                items = new ArrayList<>(currentEntries);
-            }
-            java.nio.file.Path out = file.toPath();
+            Path out = file.toPath();
             String lower = file.getName().toLowerCase();
             if (!lower.endsWith(".ics") && !lower.endsWith(".vcs")) {
                 var sel = chooser.getSelectedExtensionFilter();
@@ -282,235 +266,20 @@ public class CalendarProjektApp extends Application {
                 }
             }
             if (out.toString().toLowerCase().endsWith(".vcs")) {
-                IcsUtil.exportVcs(out, items);
+                IcsUtil.exportVcs(out, currentEntries);
             } else {
-                IcsUtil.exportIcs(out, items);
+                IcsUtil.exportIcs(out, currentEntries);
             }
         } catch (Exception ex) {
             showError("Export fehlgeschlagen", ex);
         }
     }
 
-    private void showError(String header, Exception ex) {
-        Alert alert = new Alert(AlertType.ERROR);
-        alert.setTitle("Fehler");
-        alert.setHeaderText(header);
-        alert.setContentText(ex.getMessage());
-        // Apply dark stylesheet to dialog
-        applyThemeToDialog(alert.getDialogPane());
-        alert.showAndWait();
-    }
-
-    private void showInfoDialog(Stage owner) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("CalendarProjekt\n\n");
-        sb.append("Verwendete Bibliotheken:\n");
-        sb.append("- CalendarFX 12.0.1\n");
-        sb.append("- JavaFX 22.0.1\n");
-        sb.append("- sqlite-jdbc 3.42.0.0\n");
-        sb.append("- ical4j 3.2.7 (mit Kompatibilitäts-Shim für Frequency)\n\n");
-        sb.append("Autor: Florian Knittel\n");
-
-        Alert alert = new Alert(AlertType.INFORMATION);
-        if (owner != null) alert.initOwner(owner);
-        alert.setTitle("Info");
-        alert.setHeaderText("Über dieses Projekt");
-        alert.setContentText(sb.toString());
-        applyThemeToDialog(alert.getDialogPane());
-        alert.showAndWait();
-    }
-
-    // ---- Debug helpers to identify sidebar nodes/classes ----
-    private javafx.scene.control.Labeled findLabeledByText(Parent root, String text) {
-        if (root == null) return null;
-        for (Node child : root.getChildrenUnmodifiable()) {
-            if (child instanceof javafx.scene.control.Labeled l) {
-                if (text.equals(l.getText())) return l;
-            }
-            if (child instanceof Parent p) {
-                var res = findLabeledByText(p, text);
-                if (res != null) return res;
-            }
-        }
-        return null;
-    }
-    private Parent findSidebarByTitle(Parent root, String title) {
-        javafx.scene.control.Labeled labeled = findLabeledByText(root, title);
-        if (labeled == null) return null;
-        // walk up a few levels to get the container subtree
-        Node p = labeled;
-        for (int i = 0; i < 6 && p != null; i++) p = p.getParent();
-        if (p instanceof Parent) return (Parent) p;
-        return labeled.getParent() instanceof Parent ? (Parent) labeled.getParent() : null;
-    }
-    private void dumpNodeTree(Node node, int depth, int[] counter) {
-        if (node == null) return;
-        if (counter[0] > 400) return; // limit output
-        String indent = " ".repeat(Math.min(depth, 30));
-        String styleClasses = (node.getStyleClass() == null) ? "" : node.getStyleClass().toString();
-        String id = node.getId();
-        System.out.println("[DEBUG_LOG] " + indent + node.getClass().getName() + (id != null ? ("#"+id) : "") + " " + styleClasses);
-        counter[0]++;
-        if (node instanceof Parent p) {
-            for (Node c : p.getChildrenUnmodifiable()) {
-                dumpNodeTree(c, depth + 1, counter);
-                if (counter[0] > 400) break;
-            }
-        }
-    }
-
-    private boolean miniCalendarDumped = false;
-    private void tryDumpMiniCalendar(Parent root) {
-        if (miniCalendarDumped) return;
-        // Try to find obvious mini calendar nodes
-        Node n = findFirstByStyleClass(root, "month-view");
-        if (n == null) n = findFirstByStyleClass(root, "date-picker");
-        // Many CalendarFX builds place the sidebar content in a "tray" / "drawer"
-        if (n == null) n = findFirstByStyleClass(root, "tray");
-        if (n == null) n = findFirstByStyleClass(root, "drawer");
-        Parent toDumpParent = null;
-        if (n != null) {
-            // dump a bit higher in tree to see wrappers
-            Node base = n;
-            for (int i = 0; i < 4 && base != null; i++) base = base.getParent();
-            toDumpParent = (base instanceof Parent) ? (Parent) base : null;
-            System.out.println("[DEBUG_LOG] Found mini calendar or tray node: " + n.getClass().getName() + " " + n.getStyleClass());
-        }
-        if (toDumpParent == null) {
-            // fallback: try to find sidebar by the localized title "Kalender"
-            toDumpParent = findSidebarByTitle(root, "Kalender");
-            if (toDumpParent != null) {
-                System.out.println("[DEBUG_LOG] Fallback: dumping subtree for sidebar titled 'Kalender'");
-            }
-        }
-        // If we accidentally picked the top left toolbar container, ignore and do full dump
-        if (toDumpParent != null) {
-            String cls = toDumpParent.getStyleClass() == null ? "" : toDumpParent.getStyleClass().toString();
-            if (cls.contains("left-toolbar-container")) {
-                toDumpParent = null;
-            }
-        }
-        if (toDumpParent != null) {
-            dumpNodeTree(toDumpParent, 0, new int[]{0});
-            miniCalendarDumped = true;
-        } else {
-            // ultimate fallback: dump the first 400 nodes of the entire scene graph
-            System.out.println("[DEBUG_LOG] Full scene dump (first 400 nodes)");
-            dumpNodeTree(root, 0, new int[]{0});
-            miniCalendarDumped = true;
-        }
-    }
-    private Node findFirstByStyleClass(Parent root, String styleClass) {
-        if (root == null) return null;
-        for (Node child : root.getChildrenUnmodifiable()) {
-            if (child.getStyleClass() != null && child.getStyleClass().contains(styleClass)) return child;
-            if (child instanceof Parent p) {
-                Node res = findFirstByStyleClass(p, styleClass);
-                if (res != null) return res;
-            }
-        }
-        return null;
-    }
-
-    // ---- Scan page headers to identify label classes/texts ----
-    private void scanHeaderLabels(Parent root) {
-        try {
-            int[] count = {0};
-            scanHeaderRecursive(root, count);
-        } catch (Exception ignored) { }
-    }
-    private void scanHeaderRecursive(Node node, int[] count) {
-        if (node == null || count[0] > 120) return;
-        boolean isHeader = node.getStyleClass() != null && node.getStyleClass().contains("header");
-        if (isHeader && node instanceof Parent p) {
-            String page = pageType(node);
-            if (page != null) {
-                for (Node c : p.getChildrenUnmodifiable()) {
-                    if (c instanceof javafx.scene.control.Labeled l) {
-                        String text = l.getText();
-                        if (text == null) text = "";
-                        boolean print = true;
-                        if ("day".equals(page)) {
-                            // Expect format like "Mittwoch, 08. Oktober 2025" — avoid generic "Oktober 2025"
-                            print = text.matches("^.+,\\s+\\d{1,2}\\.\\s+.+\\s+\\d{4}$");
-                        }
-                        if (print) {
-                            System.out.println("[DEBUG_LOG] HEADER label ("+page+"): classes=" + l.getStyleClass() + ", text='" + text + "'");
-                            count[0]++;
-                            if (count[0] > 120) return;
-                        }
-                    }
-                    if (c instanceof Parent) scanHeaderRecursive(c, count);
-                }
-            }
-        } else if (node instanceof Parent p) {
-            for (Node c : p.getChildrenUnmodifiable()) {
-                scanHeaderRecursive(c, count);
-                if (count[0] > 120) return;
-            }
-        }
-    }
-    private boolean belongsToPage(Node node) {
-        return pageType(node) != null;
-    }
-    private String pageType(Node node) {
-        Node n = node;
-        for (int i = 0; i < 12 && n != null; i++) {
-            var classes = n.getStyleClass();
-            if (classes != null) {
-                if (classes.contains("day-page")) return "day";
-                if (classes.contains("week-page")) return "week";
-                if (classes.contains("month-page")) return "month";
-                if (classes.contains("year-page")) return "year";
-            }
-            n = n.getParent();
-        }
-        return null;
-    }
-
-    private void localizeNode(Node node) {
-        if (node == null) return;
-        if (node instanceof ButtonBase) {
-            ButtonBase b = (ButtonBase) node;
-            String t = b.getText();
-            if (t != null) {
-                switch (t) {
-                    case "Today": b.setText("Heute"); break;
-                    case "Day": b.setText("Tag"); break;
-                    case "Week": b.setText("Woche"); break;
-                    case "Month": b.setText("Monat"); break;
-                    case "Year": b.setText("Jahr"); break;
-                    case "Print": b.setText("Drucken"); break;
-                    case "Add Calendar": b.setText("Kalender hinzufügen"); break;
-                }
-            }
-        }
-        if (node instanceof TextField) {
-            TextField tf = (TextField) node;
-            String p = tf.getPromptText();
-            if (p != null && p.equals("Search")) {
-                tf.setPromptText("Suche");
-            }
-        }
-        // Translate non-button labels like "Calendars"
-        if (node instanceof javafx.scene.control.Labeled) {
-            javafx.scene.control.Labeled l = (javafx.scene.control.Labeled) node;
-            String t2 = l.getText();
-            if (t2 != null) {
-                if (t2.equals("Calendars")) l.setText("Kalender");
-            }
-        }
-        if (node instanceof Parent) {
-            Parent parent = (Parent) node;
-            for (Node child : parent.getChildrenUnmodifiable()) {
-                localizeNode(child);
-            }
-        }
-    }
-
     private void showCreateDialog(Stage owner) {
-        Dialog<Void> dialog = new Dialog<>();
-        dialog.initOwner(owner);
+        Dialog<ButtonType> dialog = new Dialog<>();
+        if (owner != null) {
+            dialog.initOwner(owner);
+        }
         dialog.setTitle("Neuer Termin");
         ButtonType saveType = new ButtonType("Speichern", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
@@ -543,32 +312,27 @@ public class CalendarProjektApp extends Application {
 
         dialog.getDialogPane().setContent(grid);
 
-        // Validate before closing on save
-        var saveButton = dialog.getDialogPane().lookupButton(saveType);
+        Button saveButton = (Button) dialog.getDialogPane().lookupButton(saveType);
         saveButton.addEventFilter(javafx.event.ActionEvent.ACTION, evt -> {
             if (!validateInputs(titleField.getText(), startDate.getValue(), startTime.getText(), endDate.getValue(), endTime.getText())) {
                 evt.consume();
-                Alert a = new Alert(AlertType.WARNING, "Bitte Titel angeben und gültige Zeiten im Format HH:mm eingeben. Ende muss nach Start liegen.", ButtonType.OK);
-                a.initOwner(owner);
-                a.setHeaderText("Eingaben prüfen");
-                applyThemeToDialog(a.getDialogPane());
-                a.showAndWait();
+                Alert warning = new Alert(Alert.AlertType.WARNING, "Bitte Titel angeben und gültige Zeiten im Format HH:mm eingeben. Ende muss nach Start liegen.", ButtonType.OK);
+                warning.initOwner(owner);
+                warning.setHeaderText("Eingaben prüfen");
+                applyThemeToDialog(warning.getDialogPane());
+                warning.showAndWait();
                 return;
             }
             try {
                 LocalDateTime start = LocalDateTime.of(startDate.getValue(), parseTime(startTime.getText()));
                 LocalDateTime end = LocalDateTime.of(endDate.getValue(), parseTime(endTime.getText()));
                 CalendarEntry ce = new CalendarEntry(titleField.getText().trim(), descField.getText(), start, end);
-                if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
-                    dao.save(ce);
-                } else {
-                    currentEntries.add(ce);
-                    IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
-                }
-                loadFromDatabase();
+                currentEntries.add(ce);
+                persistEntries();
+                reloadFromStorage();
             } catch (Exception ex) {
                 evt.consume();
-                showError("Speichern fehlgeschlagen", (ex instanceof Exception) ? (Exception) ex : new Exception(ex));
+                showError("Speichern fehlgeschlagen", ex);
             }
         });
 
@@ -576,29 +340,67 @@ public class CalendarProjektApp extends Application {
     }
 
     private boolean validateInputs(String title, LocalDate sd, String st, LocalDate ed, String et) {
-        if (title == null || title.isBlank() || sd == null || ed == null) return false;
-        LocalTime ltStart = parseTime(st);
-        LocalTime ltEnd = parseTime(et);
-        if (ltStart == null || ltEnd == null) return false;
-        LocalDateTime start = LocalDateTime.of(sd, ltStart);
-        LocalDateTime end = LocalDateTime.of(ed, ltEnd);
-        return end.isAfter(start);
+        if (title == null || title.isBlank() || sd == null || ed == null) {
+            return false;
+        }
+        LocalTime start = parseTime(st);
+        LocalTime end = parseTime(et);
+        if (start == null || end == null) {
+            return false;
+        }
+        return LocalDateTime.of(sd, start).isBefore(LocalDateTime.of(ed, end));
     }
 
     private LocalTime parseTime(String text) {
         try {
-            String t = text == null ? "" : text.trim();
-            if (t.matches("^\\d{1}:\\d{2}$")) {
-                t = "0" + t; // normalize 9:00 -> 09:00
+            String normalized = text == null ? "" : text.trim();
+            if (normalized.matches("^\\d{1}:\\d{2}$")) {
+                normalized = "0" + normalized;
             }
-            return LocalTime.parse(t);
+            return LocalTime.parse(normalized);
         } catch (Exception e) {
             return null;
         }
     }
 
-    private void applyThemeToDialog(javafx.scene.control.DialogPane pane) {
-        if (pane == null) return;
+    private void exitAndSave() {
+        persistEntries();
+        Platform.exit();
+    }
+
+    private void showError(String header, Exception ex) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Fehler");
+        alert.setHeaderText(header);
+        alert.setContentText(ex.getMessage());
+        applyThemeToDialog(alert.getDialogPane());
+        alert.showAndWait();
+    }
+
+    private void showInfoDialog(Stage owner) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("CalendarProjekt\n\n");
+        sb.append("Verwendete Bibliotheken:\n");
+        sb.append("- CalendarFX 12.0.1\n");
+        sb.append("- JavaFX 22.0.1\n");
+        sb.append("- ical4j 3.2.7\n\n");
+        sb.append("Autor: Florian Knittel\n");
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        if (owner != null) {
+            alert.initOwner(owner);
+        }
+        alert.setTitle("Info");
+        alert.setHeaderText("Über dieses Projekt");
+        alert.setContentText(sb.toString());
+        applyThemeToDialog(alert.getDialogPane());
+        alert.showAndWait();
+    }
+
+    private void applyThemeToDialog(DialogPane pane) {
+        if (pane == null) {
+            return;
+        }
         try {
             String darkCss = getClass().getResource("/dark.css").toExternalForm();
             var sheets = pane.getStylesheets();
@@ -606,24 +408,57 @@ public class CalendarProjektApp extends Application {
             if (ConfigUtil.isDarkMode()) {
                 sheets.add(darkCss);
             }
-            System.out.println("[DEBUG_LOG] Dialog stylesheets: " + sheets + ", darkMode=" + ConfigUtil.isDarkMode());
-        } catch (Exception e) {
-            System.out.println("[DEBUG_LOG] dark.css not found for dialog: " + e.getMessage());
+        } catch (Exception ignored) {
         }
     }
 
     private void applyTheme(Scene scene) {
-        if (scene == null) return;
+        if (scene == null) {
+            return;
+        }
         try {
             String darkCss = getClass().getResource("/dark.css").toExternalForm();
-            var stylesheets = scene.getStylesheets();
-            stylesheets.remove(darkCss);
+            var sheets = scene.getStylesheets();
+            sheets.remove(darkCss);
             if (ConfigUtil.isDarkMode()) {
-                stylesheets.add(darkCss);
+                sheets.add(darkCss);
             }
-            System.out.println("[DEBUG_LOG] Applied Scene stylesheets: " + stylesheets + ", darkMode=" + ConfigUtil.isDarkMode());
-        } catch (Exception e) {
-            System.out.println("[DEBUG_LOG] dark.css not found for scene: " + e.getMessage());
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void localizeNode(Node node) {
+        if (node == null) {
+            return;
+        }
+        if (node instanceof ButtonBase button) {
+            String text = button.getText();
+            if (text != null) {
+                switch (text) {
+                    case "Today" -> button.setText("Heute");
+                    case "Day" -> button.setText("Tag");
+                    case "Week" -> button.setText("Woche");
+                    case "Month" -> button.setText("Monat");
+                    case "Year" -> button.setText("Jahr");
+                    case "Print" -> button.setText("Drucken");
+                    case "Add Calendar" -> button.setText("Kalender hinzufügen");
+                }
+            }
+        }
+        if (node instanceof TextField field) {
+            if ("Search".equals(field.getPromptText())) {
+                field.setPromptText("Suche");
+            }
+        }
+        if (node instanceof Labeled labeled) {
+            if ("Calendars".equals(labeled.getText())) {
+                labeled.setText("Kalender");
+            }
+        }
+        if (node instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                localizeNode(child);
+            }
         }
     }
 
