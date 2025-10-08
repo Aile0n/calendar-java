@@ -89,14 +89,6 @@ public class CalendarProjektApp extends Application {
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
             applyThemeToDialog(dialog.getDialogPane());
 
-            javafx.scene.control.ToggleGroup group = new javafx.scene.control.ToggleGroup();
-            javafx.scene.control.RadioButton rbIcs = new javafx.scene.control.RadioButton("Speichern als ICS");
-            javafx.scene.control.RadioButton rbDb = new javafx.scene.control.RadioButton("Speichern in Datenbank");
-            rbIcs.setToggleGroup(group);
-            rbDb.setToggleGroup(group);
-            rbIcs.setSelected(ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.ICS);
-            rbDb.setSelected(ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB);
-
             TextField icsPathField = new TextField(ConfigUtil.getIcsPath().toString());
             Button browse = new Button("…");
             browse.setOnAction(ev -> {
@@ -110,29 +102,25 @@ public class CalendarProjektApp extends Application {
             grid.setHgap(10);
             grid.setVgap(10);
             grid.setStyle("-fx-padding: 10;");
-            grid.add(new Label("Speicher-Modus:"), 0, 0);
-            grid.add(rbIcs, 1, 0);
-            grid.add(rbDb, 2, 0);
-            grid.add(new Label("ICS-Datei:"), 0, 1);
-            grid.add(icsPathField, 1, 1);
-            grid.add(browse, 2, 1);
+            grid.add(new Label("ICS-Datei:"), 0, 0);
+            grid.add(icsPathField, 1, 0);
+            grid.add(browse, 2, 0);
 
             // Dark mode toggle
             Label displayLbl = new Label("Darstellung:");
             CheckBox darkMode = new CheckBox("Dunkelmodus");
             darkMode.setSelected(ConfigUtil.isDarkMode());
-            grid.add(displayLbl, 0, 2);
-            grid.add(darkMode, 1, 2);
+            grid.add(displayLbl, 0, 1);
+            grid.add(darkMode, 1, 1);
 
             dialog.getDialogPane().setContent(grid);
 
             var res = dialog.showAndWait();
             if (res.isPresent() && res.get() == ButtonType.OK) {
                 try {
-                    ConfigUtil.setStorageMode(rbIcs.isSelected() ? ConfigUtil.StorageMode.ICS : ConfigUtil.StorageMode.DB);
-                    if (rbIcs.isSelected()) {
-                        ConfigUtil.setIcsPath(new java.io.File(icsPathField.getText()).toPath());
-                    }
+                    // Always use ICS mode
+                    ConfigUtil.setStorageMode(ConfigUtil.StorageMode.ICS);
+                    ConfigUtil.setIcsPath(new java.io.File(icsPathField.getText()).toPath());
                     // Save dark mode and apply immediately
                     ConfigUtil.setDarkMode(darkMode.isSelected());
                     applyTheme(primaryStage.getScene());
@@ -196,36 +184,21 @@ public class CalendarProjektApp extends Application {
 
     private void loadFromDatabase() {
         fxCalendar.clear();
-        if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
-            try {
-                List<CalendarEntry> items = dao.findAll();
-                ZoneId zone = ZoneId.systemDefault();
-                for (CalendarEntry ce : items) {
-                    Entry<String> entry = new Entry<>(ce.getTitle());
-                    entry.setLocation(ce.getDescription());
-                    entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
-                    fxCalendar.addEntry(entry);
-                }
-            } catch (Exception ex) {
-                showError("Fehler beim Laden aus der Datenbank", ex);
+        try {
+            currentEntries.clear();
+            var path = ConfigUtil.getIcsPath();
+            if (Files.exists(path)) {
+                currentEntries.addAll(IcsUtil.importIcs(path));
             }
-        } else {
-            try {
-                currentEntries.clear();
-                var path = ConfigUtil.getIcsPath();
-                if (Files.exists(path)) {
-                    currentEntries.addAll(IcsUtil.importIcs(path));
-                }
-                ZoneId zone = ZoneId.systemDefault();
-                for (CalendarEntry ce : currentEntries) {
-                    Entry<String> entry = new Entry<>(ce.getTitle());
-                    entry.setLocation(ce.getDescription());
-                    entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
-                    fxCalendar.addEntry(entry);
-                }
-            } catch (Exception ex) {
-                showError("Fehler beim Laden aus ICS", ex);
+            ZoneId zone = ZoneId.systemDefault();
+            for (CalendarEntry ce : currentEntries) {
+                Entry<String> entry = new Entry<>(ce.getTitle());
+                entry.setLocation(ce.getDescription());
+                entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
+                fxCalendar.addEntry(entry);
             }
+        } catch (Exception ex) {
+            showError("Fehler beim Laden aus ICS", ex);
         }
     }
 
@@ -240,14 +213,8 @@ public class CalendarProjektApp extends Application {
         if (file == null) return;
         try {
             List<CalendarEntry> imported = IcsUtil.importAuto(file.toPath());
-            if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
-                for (CalendarEntry ce : imported) {
-                    dao.save(ce);
-                }
-            } else {
-                currentEntries.addAll(imported);
-                IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
-            }
+            currentEntries.addAll(imported);
+            IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
             loadFromDatabase();
         } catch (Exception ex) {
             showError("Import fehlgeschlagen", ex);
@@ -265,12 +232,7 @@ public class CalendarProjektApp extends Application {
         File file = chooser.showSaveDialog(owner);
         if (file == null) return;
         try {
-            List<CalendarEntry> items;
-            if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
-                items = dao.findAll();
-            } else {
-                items = new ArrayList<>(currentEntries);
-            }
+            List<CalendarEntry> items = new ArrayList<>(currentEntries);
             java.nio.file.Path out = file.toPath();
             String lower = file.getName().toLowerCase();
             if (!lower.endsWith(".ics") && !lower.endsWith(".vcs")) {
@@ -559,12 +521,9 @@ public class CalendarProjektApp extends Application {
                 LocalDateTime start = LocalDateTime.of(startDate.getValue(), parseTime(startTime.getText()));
                 LocalDateTime end = LocalDateTime.of(endDate.getValue(), parseTime(endTime.getText()));
                 CalendarEntry ce = new CalendarEntry(titleField.getText().trim(), descField.getText(), start, end);
-                if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
-                    dao.save(ce);
-                } else {
-                    currentEntries.add(ce);
-                    IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
-                }
+                // Always save to ICS file
+                currentEntries.add(ce);
+                IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
                 loadFromDatabase();
             } catch (Exception ex) {
                 evt.consume();

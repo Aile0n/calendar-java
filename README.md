@@ -1,11 +1,10 @@
 # Calendar Java (JavaFX + CalendarFX)
 
-A simple desktop calendar application built with JavaFX and CalendarFX. It can import and export events in iCalendar (.ics) and vCalendar (.vcs) formats and supports two storage modes:
+A simple desktop calendar application built with JavaFX and CalendarFX. It can import and export events in iCalendar (.ics) and vCalendar (.vcs) formats.
 
-- ICS file storage (default)
-- SQLite database storage
-
-The UI is localized in German and provides buttons for creating events, importing/exporting, and switching storage mode in-app.
+- **Storage:** ICS file format (calendar.ics in working directory)
+- **UI:** Localized in German
+- **Features:** Create events, import/export calendars, persistent storage
 
 For a beginner-friendly walkthrough of the codebase, see CODE_EXPLANATION.md.
 For an end-to-end creation story and build steps in German, see PROJEKT_ERSTELLUNG.md.
@@ -16,7 +15,7 @@ For an end-to-end creation story and build steps in German, see PROJEKT_ERSTELLU
 - Build tool: Apache Maven
 - UI: JavaFX 22 (controls, FXML)
 - Calendar UI: CalendarFX 12
-- Storage: SQLite (via sqlite-jdbc)
+- Storage: ICS file format (persistent across application restarts)
 - Calendar parsing: ical4j 3.x (ICS) + custom minimal VCS support
 - Testing: JUnit Jupiter (JUnit 5)
 - Packaging: Maven Shade Plugin (fat JAR with `Main-Class: org.example.Main`)
@@ -68,28 +67,27 @@ The application window will open with a CalendarFX view and a toolbar with:
 - Neuer Termin: create a new event
 - Importieren (ICS/VCS): import events from .ics or .vcs
 - Exportieren (ICS/VCS): export current events to .ics or .vcs
-- Abonnieren (ICS-Feed): subscribe to an online calendar feed (URL to .ics) with periodic refresh
-
 
 ## Configuration
 Configuration is managed via a `config.properties` file:
 
 - Classpath defaults are provided in `src/main/resources/config.properties`:
   ```properties
-  db.url=jdbc:sqlite:calendar.db
   storage.mode=ICS
   ics.path=calendar.ics
+  ui.darkMode=false
   ```
-- At runtime, most user-facing settings are read and written by `ConfigUtil` from an external `config.properties` located in the current working directory. If absent, defaults from the classpath resource are used and a new external file may be created when saving settings via the UI.
+- At runtime, settings are read and written by `ConfigUtil` from an external `config.properties` located in the current working directory. If absent, defaults from the classpath resource are used and a new external file is created automatically.
 
 Keys:
-- `storage.mode`: `ICS` or `DB` (default: `ICS`)
-- `ics.path`: path to ICS file when in ICS mode (default: `calendar.ics` in working dir)
-- `db.url`: JDBC URL for the database. Default is a local SQLite file.
+- `storage.mode`: Always `ICS` (database support has been removed)
+- `ics.path`: path to ICS file (default: `calendar.ics` in working directory)
+- `ui.darkMode`: Enable/disable dark mode (default: `false`)
 
-Important notes:
-- DatabaseUtil currently reads `db.url` from the classpath `config.properties` and initializes the schema accordingly. Changing the DB URL via the UI is not supported; to change `db.url`, adjust `src/main/resources/config.properties` and rebuild, or ensure your runtime classpath contains an overriding `config.properties`. TODO: Unify DB URL handling with `ConfigUtil` so the UI can edit it.
-- The SQLite database file defaults to `calendar.db` in the working directory. The schema is auto-created on first run.
+**Data Persistence:**
+- All calendar entries are automatically saved to the ICS file specified in the configuration
+- The ICS file persists across application restarts
+- You can manually edit the `ics.path` in settings to use a different location
 
 
 ## Tests
@@ -102,7 +100,6 @@ Current tests cover comprehensive ICS and VCS import/export functionality (`IcsU
 - Multiple entries in a single file
 - Special characters and text escaping
 - Edge cases (empty descriptions, null values, same start/end times)
-- Advanced features (recurrence rules, categories, reminders)
 - Error handling for malformed files
 - Auto-detection of file formats
 - UID generation compliance with RFC 5545
@@ -113,8 +110,8 @@ Current tests cover comprehensive ICS and VCS import/export functionality (`IcsU
 calendar-java/
 ├─ pom.xml                         # Maven build config (Java 21, JavaFX, CalendarFX, Shade, Surefire)
 ├─ README.md
-├─ calendar.db                     # Example SQLite DB file (optional, created at runtime as needed)
-├─ calendar.ics                    # Example ICS file
+├─ calendar.ics                    # ICS file for storing calendar entries (created automatically)
+├─ config.properties               # User config file (created automatically in working directory)
 ├─ src/
 │  ├─ main/
 │  │  ├─ java/
@@ -122,17 +119,22 @@ calendar-java/
 │  │  │  ├─ CalendarProjektApp.java             # Alternative JavaFX Application (programmatic UI)
 │  │  │  ├─ CalendarProjektController.java      # FXML-based controller (CalendarFX integration)
 │  │  │  ├─ CalendarEntry.java                  # Domain model
-│  │  │  ├─ CalendarEntryDAO.java               # SQLite DAO
-│  │  │  ├─ ConfigUtil.java                     # Loads/saves storage mode & ICS path
-│  │  │  ├─ DatabaseUtil.java                   # DB connection + schema init (uses db.url)
+│  │  │  ├─ IcsUtil.java                        # ICS/VCS import/export utilities
+│  │  │  ├─ ConfigUtil.java                     # Loads/saves configuration (ICS path, dark mode)
+│  │  │  ├─ DbStorage.java                      # Database code (unused, kept for future)
+│  │  │  ├─ DatabaseUtil.java                   # Deprecated DB utilities
+│  │  │  ├─ CalendarEntryDAO.java               # Deprecated DAO (uses DatabaseUtil)
 │  │  │  └─ net/fortuna/.../Frequency.java      # Shim for CalendarFX legacy API compatibility
 │  │  └─ resources/
 │  │     ├─ calendar_view.fxml                  # FXML UI (toolbar + embedded CalendarFX view)
+│  │     ├─ dark.css                            # Dark mode stylesheet
 │  │     ├─ META-INF/MANIFEST.MF                # Manifest setting Main-Class: org.example.Main
-│  │     └─ config.properties                   # Default config (db.url, storage.mode, ics.path)
+│  │     └─ config.properties                   # Default config (storage.mode, ics.path, ui.darkMode)
 │  └─ test/
 │     └─ java/
-│        └─ IcsUtilTest.java                    # Unit tests for ICS/VCS import/export
+│        ├─ IcsUtilTest.java                    # Unit tests for ICS/VCS import/export
+│        ├─ IcsUtilEdgeCasesTest.java           # Edge case tests
+│        └─ ConfigUtilTest.java                 # Configuration tests
 ├─ target/                         # Maven build output (classes, test-classes, shaded JAR)
 └─ out/artifacts/...               # IDE build output (IntelliJ), may contain a JAR
 ```
@@ -153,10 +155,10 @@ There is no dedicated Maven JavaFX run plugin configured. TODO: Add `javafx-mave
 - If launching the shaded JAR shows a JavaFX error on your platform:
   - Prefer running from your IDE or ensure your JavaFX native libraries are present.
   - Consider adding platform-specific JavaFX classifiers (e.g., `org.openjfx:javafx-controls:22.0.1:win`) or a JavaFX Maven run plugin. TODO in build.
-- If database mode is selected but no data appears:
-  - Ensure `db.url` points to a writable SQLite file path (default `jdbc:sqlite:calendar.db`). The schema is created automatically.
-- ICS mode shows no events:
-  - Check that the `ics.path` file exists or add events via the UI and export.
+- If no events appear after restart:
+  - Check that the `calendar.ics` file exists in the working directory
+  - Verify the `ics.path` setting in `config.properties`
+  - The application automatically creates and saves to `calendar.ics` when you add events
 
 
 ## License
