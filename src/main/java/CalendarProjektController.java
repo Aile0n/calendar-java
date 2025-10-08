@@ -96,6 +96,10 @@ public class CalendarProjektController implements Initializable {
             try {
                 currentEntries.clear();
                 var path = ConfigUtil.getIcsPath();
+                // Auto-create ICS file if it doesn't exist
+                if (!Files.exists(path)) {
+                    IcsUtil.exportIcs(path, new ArrayList<>());
+                }
                 if (Files.exists(path)) {
                     currentEntries.addAll(IcsUtil.importIcs(path));
                 }

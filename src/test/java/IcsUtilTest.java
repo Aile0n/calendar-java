@@ -404,4 +404,67 @@ public class IcsUtilTest {
             Files.deleteIfExists(tmp);
         }
     }
+
+    @Test
+    void testIcsWithEmptyLines() throws Exception {
+        Path tmp = Files.createTempFile("cal-", ".ics");
+        try {
+            // Create an ICS file with empty lines (common in files from Google Calendar, Outlook, etc.)
+            String ics = "BEGIN:VCALENDAR\r\n" +
+                         "VERSION:2.0\r\n" +
+                         "PRODID:-//Test//Test//EN\r\n" +
+                         "\r\n" +  // Empty line (should be filtered)
+                         "BEGIN:VEVENT\r\n" +
+                         "UID:test123@example.com\r\n" +
+                         "DTSTART:20251020T100000\r\n" +
+                         "\r\n" +  // Empty line (should be filtered)
+                         "DTEND:20251020T110000\r\n" +
+                         "SUMMARY:Test Event with Empty Lines\r\n" +
+                         "DESCRIPTION:This file has empty lines\r\n" +
+                         "\r\n" +  // Empty line (should be filtered)
+                         "END:VEVENT\r\n" +
+                         "END:VCALENDAR\r\n";
+            Files.writeString(tmp, ics);
+            
+            List<CalendarEntry> back = IcsUtil.importIcs(tmp);
+            assertEquals(1, back.size());
+            
+            assertEquals("Test Event with Empty Lines", back.get(0).getTitle());
+            assertEquals("This file has empty lines", back.get(0).getDescription());
+        } finally {
+            Files.deleteIfExists(tmp);
+        }
+    }
+
+    @Test
+    void testIcsWithLineFolding() throws Exception {
+        Path tmp = Files.createTempFile("cal-", ".ics");
+        try {
+            // Create an ICS file with line folding (whitespace at start of line continues previous line)
+            String ics = "BEGIN:VCALENDAR\r\n" +
+                         "VERSION:2.0\r\n" +
+                         "PRODID:-//Test//Test//EN\r\n" +
+                         "BEGIN:VEVENT\r\n" +
+                         "UID:test456@example.com\r\n" +
+                         "DTSTART:20251021T140000\r\n" +
+                         "DTEND:20251021T150000\r\n" +
+                         "SUMMARY:Test with folded\r\n" +
+                         " description line\r\n" +  // Line folding (space at start)
+                         "DESCRIPTION:This is a very long description that has been folded across m\r\n" +
+                         " ultiple lines according to RFC 5545\r\n" +  // Line folding
+                         "END:VEVENT\r\n" +
+                         "END:VCALENDAR\r\n";
+            Files.writeString(tmp, ics);
+            
+            List<CalendarEntry> back = IcsUtil.importIcs(tmp);
+            assertEquals(1, back.size());
+            
+            // The summary should be properly unfolded
+            assertTrue(back.get(0).getTitle().contains("folded"));
+            // The description should be properly unfolded
+            assertTrue(back.get(0).getDescription().contains("long description"));
+        } finally {
+            Files.deleteIfExists(tmp);
+        }
+    }
 }

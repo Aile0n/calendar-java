@@ -67,6 +67,12 @@ public class ConfigUtil {
     }
 
     public static synchronized void save() throws Exception {
+        // Ensure parent directory exists
+        Path parent = externalConfigPath.getParent();
+        if (parent != null && !Files.exists(parent)) {
+            Files.createDirectories(parent);
+        }
+        // Create config file if it doesn't exist
         if (!Files.exists(externalConfigPath)) {
             Files.createFile(externalConfigPath);
         }

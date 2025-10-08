@@ -45,8 +45,25 @@ public class IcsUtil {
     }
 
     private static List<CalendarEntry> importIcs(InputStream is) throws Exception {
+        // Read all lines from input stream and filter out completely empty lines
+        // while preserving whitespace-only lines that are part of valid line folding (RFC 5545)
+        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8));
+        StringBuilder cleaned = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            // Only filter out completely empty lines (zero length)
+            // Preserve lines with whitespace as they may be part of line folding
+            if (line.length() > 0) {
+                cleaned.append(line).append("\r\n");
+            }
+        }
+        
+        // Parse the cleaned content
+        byte[] cleanedBytes = cleaned.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        java.io.ByteArrayInputStream cleanedStream = new java.io.ByteArrayInputStream(cleanedBytes);
+        
         CalendarBuilder builder = new CalendarBuilder();
-        Calendar calendar = builder.build(is);
+        Calendar calendar = builder.build(cleanedStream);
         List<CalendarEntry> entries = new ArrayList<>();
         for (var component : calendar.getComponents(Component.VEVENT)) {
             VEvent ev = (VEvent) component;
