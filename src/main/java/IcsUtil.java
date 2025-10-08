@@ -45,8 +45,20 @@ public class IcsUtil {
     }
 
     private static List<CalendarEntry> importIcs(InputStream is) throws Exception {
+        // Preprocess the input to remove empty lines which can cause parsing issues
+        String content = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        String[] lines = content.split("\\r?\\n");
+        StringBuilder cleaned = new StringBuilder();
+        for (String line : lines) {
+            // Skip completely empty lines, but keep lines with just spaces (might be folded lines)
+            if (!line.trim().isEmpty() || line.startsWith(" ") || line.startsWith("\t")) {
+                cleaned.append(line).append("\r\n");
+            }
+        }
+        
         CalendarBuilder builder = new CalendarBuilder();
-        Calendar calendar = builder.build(is);
+        Calendar calendar = builder.build(new java.io.ByteArrayInputStream(
+            cleaned.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         List<CalendarEntry> entries = new ArrayList<>();
         for (var component : calendar.getComponents(Component.VEVENT)) {
             VEvent ev = (VEvent) component;
