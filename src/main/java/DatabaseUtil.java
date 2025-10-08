@@ -9,7 +9,11 @@ import java.io.InputStream;
  * Dienstprogramm für die Datenbankanbindung (SQLite).
  * Lädt die Verbindungskonfiguration aus config.properties, initialisiert das Schema
  * und stellt Verbindungen für DAO-Operationen bereit.
+ * 
+ * @deprecated Database mode is deprecated. Use ICS file storage instead.
+ *             This class is retained for potential future reuse but should not be used in new code.
  */
+@Deprecated
 public class DatabaseUtil {
     private static String URL;
 
@@ -17,35 +21,13 @@ public class DatabaseUtil {
         try {
             URL = ConfigUtil.getDbUrl();
             if (URL == null || URL.isBlank()) {
-                throw new RuntimeException("db.url is missing in config.properties");
+                // Set a default URL but don't initialize schema
+                URL = "jdbc:sqlite:calendar.db";
             }
-            // Initialize schema
-            initSchema();
+            // Schema initialization removed - database mode is deprecated
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load DB config", e);
-        }
-    }
-
-    private static void initSchema() {
-        String createSql = "CREATE TABLE IF NOT EXISTS entries (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "title TEXT NOT NULL, " +
-                "description TEXT, " +
-                "start TEXT NOT NULL, " +
-                "end TEXT NOT NULL, " +
-                "recurrence_rule TEXT, " +
-                "reminder_minutes INTEGER, " +
-                "category TEXT" +
-                ")";
-        try (Connection conn = DriverManager.getConnection(URL);
-             Statement stmt = conn.createStatement()) {
-            stmt.execute(createSql);
-            // Try to add missing columns in case of existing DB
-            try { stmt.execute("ALTER TABLE entries ADD COLUMN recurrence_rule TEXT"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE entries ADD COLUMN reminder_minutes INTEGER"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE entries ADD COLUMN category TEXT"); } catch (SQLException ignored) {}
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to initialize schema", e);
+            // Silently fail - database mode is deprecated
+            URL = "jdbc:sqlite:calendar.db";
         }
     }
 
