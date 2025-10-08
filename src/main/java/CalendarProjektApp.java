@@ -233,11 +233,6 @@ public class CalendarProjektApp extends Application {
         if (file == null) return;
         try {
             List<CalendarEntry> items = new ArrayList<>(currentEntries);
-            if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
-                items = dao.findAll();
-            } else {
-                items = new ArrayList<>(currentEntries);
-            }
             java.nio.file.Path out = file.toPath();
             String lower = file.getName().toLowerCase();
             if (!lower.endsWith(".ics") && !lower.endsWith(".vcs")) {
