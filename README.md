@@ -8,6 +8,7 @@ A simple desktop calendar application built with JavaFX and CalendarFX. It can i
 The UI is localized in German and provides buttons for creating events, importing/exporting, and switching storage mode in-app.
 
 For a beginner-friendly walkthrough of the codebase, see CODE_EXPLANATION.md.
+For an end-to-end creation story and build steps in German, see PROJEKT_ERSTELLUNG.md.
 
 
 ## Tech Stack
@@ -42,6 +43,7 @@ cd calendar-java
 ```
 
 ### Build
+On Windows (with Maven installed): double-click `build-jar.cmd`, or run:
 ```
 mvn clean package
 ```
