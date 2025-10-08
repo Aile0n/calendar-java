@@ -97,7 +97,15 @@ Unit tests are located under `src/test/java`. To run them:
 ```
 mvn test
 ```
-Current tests cover ICS and VCS round-trip import/export (`IcsUtilTest`).
+Current tests cover comprehensive ICS and VCS import/export functionality (`IcsUtilTest`):
+- Round-trip import/export for both ICS and VCS formats
+- Multiple entries in a single file
+- Special characters and text escaping
+- Edge cases (empty descriptions, null values, same start/end times)
+- Advanced features (recurrence rules, categories, reminders)
+- Error handling for malformed files
+- Auto-detection of file formats
+- UID generation compliance with RFC 5545
 
 
 ## Project Structure

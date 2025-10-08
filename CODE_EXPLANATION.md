@@ -39,9 +39,10 @@ The app starts via a small launcher (org.example.Main) that ensures JavaFX can b
   - Reads the DB URL, initializes the database schema if needed, and provides a `getConnection()` method used by the DAO.
 
 - IcsUtil (import/export helper)
-  - ICS: Uses ical4j to parse and generate `.ics` files.
+  - ICS: Uses ical4j to parse and generate `.ics` files with full RFC 5545 compliance (including UID generation).
   - VCS: Contains a minimal reader/writer for vCalendar 1.0 (`.vcs`).
   - Also maps recurrence, categories, and reminders (VALARM) to/from `CalendarEntry` when possible.
+  - Includes comprehensive validation and error handling for malformed files.
 
 - ConfigUtil (configuration)
   - Reads/writes user settings, with preference for an external `config.properties` in the working directory (falls back to the classpath default if missing).
