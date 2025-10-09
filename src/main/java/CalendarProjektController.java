@@ -50,6 +50,7 @@ public class CalendarProjektController implements Initializable {
     private final List<CalendarEntry> currentEntries = new ArrayList<>();
 
     @Override
+    @SuppressWarnings("unchecked") // CalendarFX getCalendars/getCalendarSources return raw types
     public void initialize(URL location, ResourceBundle resources) {
         calendarView = new CalendarView();
         CalendarSource source = new CalendarSource("Meine Kalender");
@@ -121,6 +122,7 @@ public class CalendarProjektController implements Initializable {
         }
     }
 
+    @SuppressWarnings("unchecked") // CalendarFX addEntry accepts raw Entry type
     private void populateCalendar(List<CalendarEntry> items) {
         // clear all calendars
         fxCalendar.clear();
@@ -146,6 +148,7 @@ public class CalendarProjektController implements Initializable {
      * (dragging, resizing, deleting, or editing entries) are captured
      * before exporting to ICS.
      */
+    @SuppressWarnings("unchecked") // CalendarFX methods return raw types (findEntries, getCalendars, getCalendarSources)
     private void rebuildCurrentEntriesFromUI() {
         currentEntries.clear();
         // Collect entries from all calendars in the view
@@ -173,6 +176,7 @@ public class CalendarProjektController implements Initializable {
         }
     }
 
+    @SuppressWarnings("unchecked") // CalendarFX getCalendars returns raw ObservableList type
     private Calendar getOrCreateCalendar(String category) {
         if ("Allgemein".equalsIgnoreCase(category)) return fxCalendar;
         return categoryCalendars.computeIfAbsent(category, c -> {
