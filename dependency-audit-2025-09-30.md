@@ -74,3 +74,26 @@ Outputs will be in target/dependency-check-report.[html|json|xml]. Use the JSON 
 
 ## Next step
 If you’d like, I can update pom.xml to the patch/minor versions listed above and run tests. Please confirm which of the suggested updates you want me to apply. If you prefer, we can apply them one-by-one starting with JavaFX and test after each change.
+
+---
+
+## Update Status (2025-10-08)
+
+✅ **COMPLETED**: All recommended patch/minor dependency updates have been successfully applied.
+
+**Updates Applied:**
+- JavaFX: 22.0.1 → 22.0.2
+- sqlite-jdbc: 3.42.0.0 → 3.46.1.3
+- ical4j: 3.2.7 → 3.2.19 (with API compatibility fix for VAlarm)
+- junit-jupiter: 5.10.2 → 5.10.5
+- maven-surefire-plugin: 3.2.5 → 3.3.1
+- maven-shade-plugin: 3.5.1 → 3.6.1
+
+**API Compatibility Fix:**
+Fixed ical4j 3.2.19 breaking change: VAlarm components must now be added using `ev.getComponents().add(alarm)` instead of `ev.getAlarms().add(alarm)`.
+
+**Testing:** All 18 unit tests pass successfully.
+
+**Next Steps:** Run OWASP Dependency-Check for authoritative CVE scanning.
+
+See DEPENDENCY_UPDATE_SUMMARY.md for full details.
