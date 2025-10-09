@@ -263,7 +263,9 @@ public class CalendarProjektApp extends Application {
     private void rebuildCurrentEntriesFromUI() {
         currentEntries.clear();
         ZoneId zone = ZoneId.systemDefault();
-        for (Entry<?> entry : fxCalendar.findEntries("")) {
+        for (Object obj : fxCalendar.findEntries("")) {
+            @SuppressWarnings("unchecked")
+            Entry<?> entry = (Entry<?>) obj;
             String title = entry.getTitle() != null ? entry.getTitle() : "(Ohne Titel)";
             String description = entry.getLocation() != null ? entry.getLocation() : "";
             LocalDateTime start = entry.getStartAsLocalDateTime();
