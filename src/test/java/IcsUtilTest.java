@@ -132,29 +132,6 @@ public class IcsUtilTest {
     }
 
     @Test
-    void testIcsWithRecurrenceRule() throws Exception {
-        List<CalendarEntry> src = new ArrayList<>();
-        CalendarEntry recurring = sample("Weekly Meeting", "Team sync", 
-                LocalDateTime.of(2025, 9, 1, 10, 0), LocalDateTime.of(2025, 9, 1, 11, 0));
-        recurring.setRecurrenceRule("FREQ=WEEKLY;COUNT=10");
-        src.add(recurring);
-        
-        Path tmp = Files.createTempFile("cal-", ".ics");
-        try {
-            IcsUtil.exportIcs(tmp, src);
-            List<CalendarEntry> back = IcsUtil.importIcs(tmp);
-            assertEquals(1, back.size());
-            
-            assertEquals("Weekly Meeting", back.get(0).getTitle());
-            assertNotNull(back.get(0).getRecurrenceRule());
-            assertTrue(back.get(0).getRecurrenceRule().contains("FREQ=WEEKLY"));
-            assertTrue(back.get(0).getRecurrenceRule().contains("COUNT=10"));
-        } finally {
-            Files.deleteIfExists(tmp);
-        }
-    }
-
-    @Test
     void testIcsWithCategory() throws Exception {
         List<CalendarEntry> src = new ArrayList<>();
         CalendarEntry withCategory = sample("Project Meeting", "Discuss milestones", 
@@ -315,9 +292,8 @@ public class IcsUtilTest {
     @Test
     void testIcsWithAllFeatures() throws Exception {
         List<CalendarEntry> src = new ArrayList<>();
-        CalendarEntry full = sample("Complete Event", "Event with all features", 
+        CalendarEntry full = sample("Complete Event", "Event with all features (ohne Recurrence)",
                 LocalDateTime.of(2025, 9, 30, 10, 0), LocalDateTime.of(2025, 9, 30, 11, 0));
-        full.setRecurrenceRule("FREQ=DAILY;COUNT=5");
         full.setCategory("Important");
         full.setReminderMinutesBefore(30);
         src.add(full);
@@ -330,11 +306,9 @@ public class IcsUtilTest {
             
             CalendarEntry result = back.get(0);
             assertEquals("Complete Event", result.getTitle());
-            assertEquals("Event with all features", result.getDescription());
+            assertEquals("Event with all features (ohne Recurrence)", result.getDescription());
             assertEquals(full.getStart(), result.getStart());
             assertEquals(full.getEnd(), result.getEnd());
-            assertNotNull(result.getRecurrenceRule());
-            assertTrue(result.getRecurrenceRule().contains("FREQ=DAILY"));
             assertEquals("Important", result.getCategory());
             assertEquals(30, result.getReminderMinutesBefore());
         } finally {

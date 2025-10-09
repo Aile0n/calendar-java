@@ -4,20 +4,14 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 /**
  * Zentrale Konfigurationsverwaltung für die Anwendung.
- * Liest und schreibt Einstellungen wie Speicher-Modus (ICS/DB) und Pfade
+ * Liest und schreibt Einstellungen wie Pfade und Darstellung
  * aus/zu einer Properties-Datei (config.properties).
  */
 public class ConfigUtil {
-    public enum StorageMode { ICS, DB }
-
     private static final String FILE_NAME = "config.properties"; // prefer working directory
 
     private static Properties props;
@@ -47,9 +41,6 @@ public class ConfigUtil {
             } catch (Exception ignored) {}
         }
         // Defaults
-        if (p.getProperty("storage.mode") == null) {
-            p.setProperty("storage.mode", "ICS");
-        }
         if (p.getProperty("ics.path") == null) {
             // Default to working directory, or user home if working directory is not writable
             String defaultPath = "calendar.ics";
@@ -91,29 +82,12 @@ public class ConfigUtil {
         }
     }
 
-    public static StorageMode getStorageMode() {
-        String mode = props.getProperty("storage.mode", "ICS").trim().toUpperCase();
-        try {
-            return StorageMode.valueOf(mode);
-        } catch (Exception e) {
-            return StorageMode.ICS;
-        }
-    }
-
-    public static void setStorageMode(StorageMode mode) {
-        props.setProperty("storage.mode", mode.name());
-    }
-
     public static Path getIcsPath() {
         return Paths.get(props.getProperty("ics.path", "calendar.ics"));
     }
 
     public static void setIcsPath(Path path) {
         props.setProperty("ics.path", path.toString());
-    }
-
-    public static String getDbUrl() {
-        return props.getProperty("db.url");
     }
 
     public static boolean isDarkMode() {

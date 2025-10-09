@@ -101,3 +101,16 @@ This fix is fully backward compatible:
 - No changes to database schema
 - No changes to ICS file format
 - Existing entries and functionality remain unchanged
+
+## UI Improvements (Version 1.0.0)
+
+### Toolbar Layout Enhancement
+The application toolbar has been reorganized for better user experience:
+- **Left side**: Action buttons (Settings, New Event, Import, Export)
+- **Right side**: Status indicator and Exit/Save button
+- **Spacer**: A flexible region automatically pushes the status label and exit button to the right edge
+
+This layout provides:
+- Clear visual separation between actions and status/controls
+- Consistent placement of the save button where users expect it
+- Real-time status feedback always visible before the exit action

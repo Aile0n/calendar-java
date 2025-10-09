@@ -2,13 +2,13 @@
 
 This project depends on third‑party libraries. Their licenses are summarized below to help you understand your obligations when using, distributing, or modifying this software.
 
-This list is based on pom.xml as of 2025-10-08. Always verify on Maven Central and vendor sites for the most current terms.
+This list is based on pom.xml as of version 1.0.0 (2025-10-09). Always verify on Maven Central and vendor sites for the most current terms.
 
 ## Runtime dependencies
 
 - com.calendarfx:view 12.0.1
   - License: CalendarFX commercial license by DLSC (vendor license). See https://dlsc.com/products/calendarfx/
-  - Notes: CalendarFX is a commercial product. Use in production typically requires a paid license from DLSC unless you qualify under a specific offering. Confirm your organization’s license.
+  - Notes: CalendarFX is a commercial product. Use in production typically requires a paid license from DLSC unless you qualify under a specific offering. Confirm your organization's license.
 
 - org.openjfx:javafx-controls 22.0.1
   - License: GNU General Public License, version 2, with the Classpath Exception (GPLv2 + CE)
@@ -43,10 +43,16 @@ This list is based on pom.xml as of 2025-10-08. Always verify on Maven Central a
 
 ## Additional notes and guidance
 
-- CalendarFX: Please review DLSC’s licensing terms before distributing or using this application. If you intend to distribute binaries, ensure that your CalendarFX license allows redistribution in your context.
-- OpenJFX (GPLv2 + Classpath Exception): The Classpath Exception permits linking with independent modules without subjecting the entire application to GPL terms. However, you must still comply with the license’s notice requirements.
+- CalendarFX: Please review DLSC's licensing terms before distributing or using this application. If you intend to distribute binaries, ensure that your CalendarFX license allows redistribution in your context.
+- OpenJFX (GPLv2 + Classpath Exception): The Classpath Exception permits linking with independent modules without subjecting the entire application to GPL terms. However, you must still comply with the license's notice requirements.
 - Apache 2.0 and BSD‑3‑Clause: Both are permissive licenses; include appropriate notices if you redistribute.
 - EPL‑2.0 (test only): Applies to test artifacts; generally not redistributed with your application.
+
+## Version History
+- **1.0.0** (2025-10-09): UI improvements, toolbar reorganization
+- **0.2.0** (2025-10-08): Persistence bugfixes, auto-save functionality
+- **0.1.1** (2025-10-08): Documentation improvements
+- **0.1.0** (2025-09-30): Initial release with ICS/VCS support
 
 ## How to verify or regenerate this list
 
