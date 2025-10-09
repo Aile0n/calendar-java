@@ -57,6 +57,16 @@ public class ConfigUtil {
             p.setProperty("ui.darkMode", "false");
         }
         props = p;
+        
+        // If config was loaded from classpath (not external file), save it externally
+        // This ensures the config persists across runs when using a JAR
+        if (!loaded || !Files.exists(externalConfigPath)) {
+            try {
+                save();
+            } catch (Exception ignored) {
+                // If we can't save, continue with in-memory config
+            }
+        }
     }
 
     public static synchronized void save() throws Exception {
@@ -88,7 +98,16 @@ public class ConfigUtil {
     }
 
     public static Path getIcsPath() {
-        return Paths.get(props.getProperty("ics.path", "calendar.ics"));
+        String icsPathStr = props.getProperty("ics.path", "calendar.ics");
+        Path icsPath = Paths.get(icsPathStr);
+        
+        // If the path is relative, resolve it relative to the working directory
+        // This ensures it works consistently when running from a JAR
+        if (!icsPath.isAbsolute()) {
+            icsPath = Paths.get(System.getProperty("user.dir")).resolve(icsPath);
+        }
+        
+        return icsPath;
     }
 
     public static void setIcsPath(Path path) {

@@ -34,6 +34,9 @@ calendar.db
 *.db
 *.sqlite
 
+# Runtime configuration (generated on first run)
+config.properties
+
 # Exported/imported calendar files (generated during use)
 *.ics
 
