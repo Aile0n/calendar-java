@@ -1,0 +1,875 @@
+/* Enhanced dark theme for the app (JavaFX + CalendarFX) */
+.root {
+    -fx-base: #2b2b2b;
+    -fx-background: #2b2b2b;
+    -fx-control-inner-background: #3c3f41;
+    -fx-accent: #4aa3ff;
+    -fx-default-button: #4aa3ff;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* Text and common controls */
+.label, .text, .button, .toggle-button, .radio-button, .check-box, .menu-item, .tab, .tooltip {
+    -fx-text-fill: #e6e6e6;
+}
+
+.text-field, .text-area, .choice-box, .combo-box-base, .spinner, .date-picker, .color-picker {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+
+.separator, .menu-bar, .tool-bar {
+    -fx-background-color: #2b2b2b;
+}
+
+.scroll-pane, .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+
+.table-view, .list-view, .tree-view {
+    -fx-background-color: #3c3f41;
+    -fx-control-inner-background: #3c3f41;
+}
+.table-row-cell, .list-cell, .tree-cell {
+    -fx-text-fill: #e6e6e6;
+}
+.table-row-cell:filled:selected, .list-cell:selected, .tree-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+.dialog-pane, .dialog-pane > .content.label, .alert {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.dialog-pane .button {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* DatePicker popup */
+.date-picker-popup, .date-picker > .arrow-button, .date-picker > .text-field {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+.date-cell, .week-number-cell {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+.date-cell:selected, .date-cell:hover {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+/* CalendarFX tweaks */
+.calendar-view, .day-view, .week-view, .month-view, .agenda-view, .year-view {
+    -fx-background-color: #2b2b2b;
+}
+.day-view .time-scale, .week-view .time-scale {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #cfcfcf;
+}
+.week-view .header, .day-view .header, .month-view .header {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.entry-view, .all-day-entry-view {
+    -fx-text-fill: #ffffff;
+}
+
+/* Enhanced dark theme for the app (JavaFX + CalendarFX) */
+.root {
+    -fx-base: #2b2b2b;
+    -fx-background: #2b2b2b;
+    -fx-control-inner-background: #3c3f41;
+    -fx-accent: #4aa3ff;
+    -fx-default-button: #4aa3ff;
+    -fx-text-fill: #e6e6e6;
+    /* prevent any white bleed from scene by painting root fully */
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+/* Ensure common root containers are dark (covers start window white area) */
+.vbox, .anchor-pane, .pane, .stack-pane, .border-pane, .grid-pane {
+    -fx-background-color: #2b2b2b;
+}
+
+/* Text and common controls */
+.label, .text, .button, .toggle-button, .radio-button, .check-box, .menu-item, .tab, .tooltip {
+    -fx-text-fill: #e6e6e6;
+}
+
+.text-field, .text-area, .choice-box, .combo-box-base, .spinner, .date-picker, .color-picker {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+
+.separator, .menu-bar, .tool-bar {
+    -fx-background-color: #2b2b2b;
+}
+
+.scroll-pane, .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+
+.table-view, .list-view, .tree-view {
+    -fx-background-color: #3c3f41;
+    -fx-control-inner-background: #3c3f41;
+}
+.table-row-cell, .list-cell, .tree-cell {
+    -fx-text-fill: #e6e6e6;
+}
+.table-row-cell:filled:selected, .list-cell:selected, .tree-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+.dialog-pane, .dialog-pane > .content.label, .alert {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.dialog-pane .button {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* DatePicker popup */
+.date-picker-popup, .date-picker > .arrow-button, .date-picker > .text-field {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+.date-cell, .week-number-cell {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+.date-cell:selected, .date-cell:hover {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+/* CalendarFX tweaks */
+.calendar-view, .day-view, .week-view, .month-view, .agenda-view, .year-view {
+    -fx-background-color: #2b2b2b;
+}
+/* Ensure CalendarFX content/pages and scrolls are dark */
+.calendar-view .content, .calendar-view .page, .calendar-view .tool-bar,
+.day-page, .week-page, .month-page, .year-page {
+    -fx-background-color: #2b2b2b;
+}
+.week-view .scroll-pane, .day-view .scroll-pane, .month-view .scroll-pane,
+.week-view .scroll-pane > .viewport, .day-view .scroll-pane > .viewport, .month-view .scroll-pane > .viewport,
+.all-day-view, .all-day-view .scroll-pane, .all-day-view .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+.week-view .header, .day-view .header, .month-view .header {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.month-view .date-cell, .month-view .week-number-cell, .month-view .day-cell {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.day-view .time-scale, .week-view .time-scale {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #cfcfcf;
+}
+.entry-view, .all-day-entry-view {
+    -fx-text-fill: #ffffff;
+}
+
+/* Subtle hover for buttons in dark mode */
+.button:hover { -fx-background-color: #45494a; }
+
+/* Enhanced dark theme for the app (JavaFX + CalendarFX) */
+.root {
+    -fx-base: #2b2b2b;
+    -fx-background: #2b2b2b;
+    -fx-control-inner-background: #3c3f41;
+    -fx-accent: #4aa3ff;
+    -fx-default-button: #4aa3ff;
+    -fx-text-fill: #e6e6e6;
+    /* prevent any white bleed from scene by painting root fully */
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+/* Ensure common root containers are dark (covers start window white area) */
+.vbox, .anchor-pane, .pane, .stack-pane, .border-pane, .grid-pane {
+    -fx-background-color: #2b2b2b;
+}
+
+/* Text and common controls */
+.label, .text, .button, .toggle-button, .radio-button, .check-box, .menu-item, .tab, .tooltip {
+    -fx-text-fill: #e6e6e6;
+}
+
+.text-field, .text-area, .choice-box, .combo-box-base, .spinner, .date-picker, .color-picker {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+
+.separator, .menu-bar, .tool-bar {
+    -fx-background-color: #2b2b2b;
+}
+
+.scroll-pane, .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+
+.table-view, .list-view, .tree-view {
+    -fx-background-color: #3c3f41;
+    -fx-control-inner-background: #3c3f41;
+}
+.table-row-cell, .list-cell, .tree-cell {
+    -fx-text-fill: #e6e6e6;
+}
+.table-row-cell:filled:selected, .list-cell:selected, .tree-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+.dialog-pane, .dialog-pane > .content.label, .alert {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.dialog-pane .button {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* DatePicker popup */
+.date-picker-popup, .date-picker > .arrow-button, .date-picker > .text-field {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+.date-cell, .week-number-cell {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+.date-cell:selected, .date-cell:hover {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+/* CalendarFX tweaks */
+.calendar-view, .day-view, .week-view, .month-view, .agenda-view, .year-view {
+    -fx-background-color: #2b2b2b;
+}
+/* Ensure CalendarFX content/pages and scrolls are dark */
+.calendar-view .content, .calendar-view .page, .calendar-view .tool-bar,
+.day-page, .week-page, .month-page, .year-page {
+    -fx-background-color: #2b2b2b;
+}
+.week-view .scroll-pane, .day-view .scroll-pane, .month-view .scroll-pane,
+.week-view .scroll-pane > .viewport, .day-view .scroll-pane > .viewport, .month-view .scroll-pane > .viewport,
+.all-day-view, .all-day-view .scroll-pane, .all-day-view .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+.week-view .header, .day-view .header, .month-view .header {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.month-view .date-cell, .month-view .week-number-cell, .month-view .day-cell {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.day-view .time-scale, .week-view .time-scale {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #cfcfcf;
+}
+.entry-view, .all-day-entry-view {
+    -fx-text-fill: #ffffff;
+}
+
+/* Calendar list/selection area in CalendarView (fix bottom white strip) */
+.calendar-view .list-view {
+    -fx-background-color: #2b2b2b;
+}
+.calendar-view .list-view .list-cell {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.calendar-view .list-view .list-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+.calendar-view .list-view .scroll-pane, 
+.calendar-view .list-view .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+
+/* Year/Month/Week additional content */
+.year-view .month-view, .year-view .month-view .day-cell, .year-view .month-view .week-number-cell {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.month-view .day-header, .week-view .day-header, .day-view .day-header {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* Subtle hover for buttons in dark mode */
+.button:hover { -fx-background-color: #45494a; }
+
+/* Enhanced dark theme for the app (JavaFX + CalendarFX) */
+.root {
+    -fx-base: #2b2b2b;
+    -fx-background: #2b2b2b;
+    -fx-control-inner-background: #3c3f41;
+    -fx-accent: #4aa3ff;
+    -fx-default-button: #4aa3ff;
+    -fx-text-fill: #e6e6e6;
+    /* prevent any white bleed from scene by painting root fully */
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+/* Ensure common root containers are dark (covers start window white area) */
+.vbox, .anchor-pane, .pane, .stack-pane, .border-pane, .grid-pane {
+    -fx-background-color: #2b2b2b;
+}
+
+/* Text and common controls */
+.label, .text, .button, .toggle-button, .radio-button, .check-box, .menu-item, .tab, .tooltip {
+    -fx-text-fill: #e6e6e6;
+}
+
+.text-field, .text-area, .choice-box, .combo-box-base, .spinner, .date-picker, .color-picker {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+
+.separator, .menu-bar, .tool-bar {
+    -fx-background-color: #2b2b2b;
+}
+
+.scroll-pane, .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+
+.table-view, .list-view, .tree-view {
+    -fx-background-color: #3c3f41;
+    -fx-control-inner-background: #3c3f41;
+}
+.table-row-cell, .list-cell, .tree-cell {
+    -fx-text-fill: #e6e6e6;
+}
+.table-row-cell:filled:selected, .list-cell:selected, .tree-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+.dialog-pane, .dialog-pane > .content.label, .alert {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+/* Also darken generic dialog content containers */
+.dialog-pane > .content {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.dialog-pane .button {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* DatePicker popup */
+.date-picker-popup, .date-picker > .arrow-button, .date-picker > .text-field {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+.date-cell, .week-number-cell {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+.date-cell:selected, .date-cell:hover {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+/* CalendarFX tweaks */
+.calendar-view, .day-view, .week-view, .month-view, .agenda-view, .year-view {
+    -fx-background-color: #2b2b2b;
+}
+/* Ensure CalendarFX content/pages and scrolls are dark */
+.calendar-view .content, .calendar-view .page, .calendar-view .tool-bar,
+.day-page, .week-page, .month-page, .year-page {
+    -fx-background-color: #2b2b2b;
+}
+.week-view .scroll-pane, .day-view .scroll-pane, .month-view .scroll-pane,
+.week-view .scroll-pane > .viewport, .day-view .scroll-pane > .viewport, .month-view .scroll-pane > .viewport,
+.all-day-view, .all-day-view .scroll-pane, .all-day-view .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+.week-view .header, .day-view .header, .month-view .header {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.month-view .date-cell, .month-view .week-number-cell, .month-view .day-cell {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.day-view .time-scale, .week-view .time-scale {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #cfcfcf;
+}
+.entry-view, .all-day-entry-view {
+    -fx-text-fill: #ffffff;
+}
+
+/* Calendar list/selection area in CalendarView (fix bottom white strip) */
+.calendar-view .list-view {
+    -fx-background-color: #2b2b2b;
+}
+.calendar-view .list-view .list-cell {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.calendar-view .list-view .list-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+.calendar-view .list-view .scroll-pane, 
+.calendar-view .list-view .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+
+/* Year/Month/Week additional content */
+.year-view, .year-view .scroll-pane, .year-view .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+.year-view .month-view, .year-view .month-view .day-cell, .year-view .month-view .week-number-cell {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.month-view .day-header, .week-view .day-header, .day-view .day-header {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* Today and weekend highlighting (avoid white boxes) */
+/* Month view */
+.month-view .day-cell.today {
+    -fx-background-color: #354a5e; /* today */
+    -fx-text-fill: #ffffff;
+}
+.month-view .day-cell.weekend {
+    -fx-background-color: #2d2d2d; /* weekends */
+    -fx-text-fill: #e6e6e6;
+}
+.month-view .day-cell:selected {
+    -fx-background-color: #395574; /* selection */
+    -fx-text-fill: #ffffff;
+}
+/* Week view headers and cells */
+.week-view .header .today, .day-view .header .today {
+    -fx-background-color: #354a5e;
+    -fx-text-fill: #ffffff;
+}
+.week-view .header .weekend {
+    -fx-background-color: #2d2d2d;
+    -fx-text-fill: #e6e6e6;
+}
+/* Year view day cells */
+.year-view .month-view .day-cell.today {
+    -fx-background-color: #354a5e;
+    -fx-text-fill: #ffffff;
+}
+.year-view .month-view .day-cell.weekend {
+    -fx-background-color: #2d2d2d;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* Subtle hover for buttons in dark mode */
+.button:hover { -fx-background-color: #45494a; }
+
+/* Enhanced dark theme for the app (JavaFX + CalendarFX) */
+.root {
+    -fx-base: #2b2b2b;
+    -fx-background: #2b2b2b;
+    -fx-control-inner-background: #3c3f41;
+    -fx-accent: #4aa3ff;
+    -fx-default-button: #4aa3ff;
+    -fx-text-fill: #e6e6e6;
+    /* prevent any white bleed from scene by painting root fully */
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+/* Ensure common root containers are dark (covers start window white area) */
+.vbox, .anchor-pane, .pane, .stack-pane, .border-pane, .grid-pane {
+    -fx-background-color: #2b2b2b;
+}
+
+/* Text and common controls */
+.label, .text, .button, .toggle-button, .radio-button, .check-box, .menu-item, .tab, .tooltip {
+    -fx-text-fill: #e6e6e6;
+}
+
+.text-field, .text-area, .choice-box, .combo-box-base, .spinner, .date-picker, .color-picker {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+
+.separator, .menu-bar, .tool-bar {
+    -fx-background-color: #2b2b2b;
+}
+
+.scroll-pane, .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+
+.table-view, .list-view, .tree-view {
+    -fx-background-color: #3c3f41;
+    -fx-control-inner-background: #3c3f41;
+}
+.table-row-cell, .list-cell, .tree-cell {
+    -fx-text-fill: #e6e6e6;
+}
+.table-row-cell:filled:selected, .list-cell:selected, .tree-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+.dialog-pane, .dialog-pane > .content.label, .alert {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+/* Also darken generic dialog content containers */
+.dialog-pane > .content {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.dialog-pane .button {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* DatePicker popup */
+.date-picker-popup, .date-picker > .arrow-button, .date-picker > .text-field {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+.date-cell, .week-number-cell {
+    -fx-background-color: #3c3f41;
+    -fx-text-fill: #e6e6e6;
+}
+.date-cell:selected, .date-cell:hover {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+/* CalendarFX tweaks */
+.calendar-view, .day-view, .week-view, .month-view, .agenda-view, .year-view {
+    -fx-background-color: #2b2b2b;
+}
+/* Ensure CalendarFX content/pages and scrolls are dark */
+.calendar-view .content, .calendar-view .page, .calendar-view .tool-bar,
+.day-page, .week-page, .month-page, .year-page {
+    -fx-background-color: #2b2b2b;
+}
+.week-view .scroll-pane, .day-view .scroll-pane, .month-view .scroll-pane,
+.week-view .scroll-pane > .viewport, .day-view .scroll-pane > .viewport, .month-view .scroll-pane > .viewport,
+.all-day-view, .all-day-view .scroll-pane, .all-day-view .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+.week-view .header, .day-view .header, .month-view .header {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.month-view .date-cell, .month-view .week-number-cell, .month-view .day-cell {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.day-view .time-scale, .week-view .time-scale {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #cfcfcf;
+}
+.entry-view, .all-day-entry-view {
+    -fx-text-fill: #ffffff;
+}
+
+/* Calendar list/selection area in CalendarView (fix bottom white strip) */
+.calendar-view .list-view {
+    -fx-background-color: #2b2b2b;
+}
+.calendar-view .list-view .list-cell {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.calendar-view .list-view .list-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+.calendar-view .list-view .scroll-pane, 
+.calendar-view .list-view .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+
+/* Year/Month/Week additional content */
+.year-view, .year-view .scroll-pane, .year-view .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+.year-view .month-view, .year-view .month-view .day-cell, .year-view .month-view .week-number-cell {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.month-view .day-header, .week-view .day-header, .day-view .day-header {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* Today and weekend highlighting (avoid white boxes) */
+/* Month view */
+.month-view .day-cell.today {
+    -fx-background-color: #354a5e; /* today */
+    -fx-text-fill: #ffffff;
+}
+.month-view .day-cell.weekend {
+    -fx-background-color: #2d2d2d; /* weekends */
+    -fx-text-fill: #e6e6e6;
+}
+.month-view .day-cell:selected {
+    -fx-background-color: #395574; /* selection */
+    -fx-text-fill: #ffffff;
+}
+/* Week view headers and cells */
+.week-view .header .today, .day-view .header .today {
+    -fx-background-color: #354a5e;
+    -fx-text-fill: #ffffff;
+}
+.week-view .header .weekend {
+    -fx-background-color: #2d2d2d;
+    -fx-text-fill: #e6e6e6;
+}
+/* Year view day cells */
+.year-view .month-view .day-cell.today {
+    -fx-background-color: #354a5e;
+    -fx-text-fill: #ffffff;
+}
+.year-view .month-view .day-cell.weekend {
+    -fx-background-color: #2d2d2d;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* Fallback: ensure everything inside week/month/year is dark even if class names differ */
+.week-view * {
+    -fx-background-color: #2b2b2b;
+}
+.month-view * {
+    -fx-background-color: #2f2f2f;
+}
+.year-view * {
+    -fx-background-color: #2b2b2b;
+}
+/* Keep text readable */
+.week-view *, .month-view *, .year-view * {
+    -fx-text-fill: #e6e6e6;
+}
+
+/* Subtle hover for buttons in dark mode */
+.button:hover { -fx-background-color: #45494a; }
+
+
+/* ---- Additional fixes: Week All-Day row + Sidebar (App) ---- */
+/* All-day row containers */
+.all-day-view,
+.all-day-view .scroll-pane,
+.all-day-view .scroll-pane > .viewport,
+.all-day-view .container,
+.all-day-view .day-header,
+.all-day-view .hours-view,
+.all-day-day-view,
+.all-day-day-view .scroll-pane,
+.all-day-day-view .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+/* All-day today/weekend highlights (avoid white boxes) */
+.all-day-view .today, .all-day-day-view .today {
+    -fx-background-color: #354a5e;
+    -fx-text-fill: #ffffff;
+}
+.all-day-view .weekend, .all-day-day-view .weekend {
+    -fx-background-color: #2d2d2d;
+    -fx-text-fill: #e6e6e6;
+}
+/* Some CalendarFX skins use .all-day-scroll-pane */
+.all-day-scroll-pane, .all-day-scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+}
+
+/* CalendarView left sidebar (calendar selector + mini calendar) */
+.calendar-view .sidebar,
+.calendar-view .left-pane,
+.calendar-view .drawer,
+.calendar-view .calendar-selector,
+.calendar-view .calendar-selector .list-view,
+.calendar-view .calendar-selector .list-view .list-cell,
+.calendar-view .calendar-selector .month-view,
+.calendar-view .calendar-selector .month-view .day-cell,
+.calendar-view .calendar-selector .month-view .week-number-cell,
+.calendar-view .calendar-selector .scroll-pane,
+.calendar-view .calendar-selector .scroll-pane > .viewport {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.calendar-view .calendar-selector .list-view .list-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: white;
+}
+
+/* SplitPane and divider often used for sidebar */
+.split-pane, .split-pane > .split-pane-divider {
+    -fx-background-color: #2b2b2b;
+}
+
+
+/* ---- Broader targets for Week All-Day row and Sidebar DatePicker ---- */
+/* Week view all-day: be aggressive on common containers */
+.week-view .all-day-view,
+.week-view .all-day-view .scroll-pane,
+.week-view .all-day-view .scroll-pane > .viewport,
+.week-view .all-day-view .stack-pane,
+.week-view .all-day-view .flow-pane,
+.week-view .all-day-view .tile,
+.week-view .all-day-view .label,
+.week-view .all-day-view .day,
+.week-view .all-day-view .background,
+.week-view .all-day-view .container {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.week-view .all-day-view .today {
+    -fx-background-color: #354a5e;
+    -fx-text-fill: #ffffff;
+}
+.week-view .all-day-view .weekend {
+    -fx-background-color: #2d2d2d;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* Sidebar mini-calendar: DatePicker variants inside CalendarView */
+.calendar-view .date-picker,
+.calendar-view .date-picker .month-year-pane,
+.calendar-view .date-picker .calendar-grid,
+.calendar-view .date-picker .day-cell,
+.calendar-view .date-picker .week-number-cell,
+.calendar-view .date-picker .spinner,
+.calendar-view .date-picker .arrow-button,
+.calendar-view .date-picker .text-field {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.calendar-view .date-picker .day-cell:hover,
+.calendar-view .date-picker .day-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: #ffffff;
+}
+
+
+/* ---- Sidebar containers: TitledPane/Accordion used in CalendarView ---- */
+.calendar-view .titled-pane,
+.calendar-view .titled-pane > .title,
+.calendar-view .titled-pane > .content,
+.calendar-view .accordion,
+.calendar-view .accordion .titled-pane,
+.calendar-view .accordion .titled-pane > .title,
+.calendar-view .accordion .titled-pane > .content {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.calendar-view .titled-pane > .title > .text,
+.calendar-view .accordion .titled-pane > .title > .text {
+    -fx-fill: #e6e6e6;
+}
+
+/* Ensure any MonthView inside CalendarView sidebar is dark */
+.calendar-view .month-view,
+.calendar-view .month-view .day-cell,
+.calendar-view .month-view .week-number-cell,
+.calendar-view .month-view .day-header {
+    -fx-background-color: #2f2f2f;
+    -fx-text-fill: #e6e6e6;
+}
+.calendar-view .month-view .day-cell.today { -fx-background-color: #354a5e; -fx-text-fill: #ffffff; }
+.calendar-view .month-view .day-cell.weekend { -fx-background-color: #2d2d2d; -fx-text-fill: #e6e6e6; }
+.calendar-view .month-view .day-cell:selected { -fx-background-color: #395574; -fx-text-fill: #ffffff; }
+
+/* Subtle separator below All-day area in WeekView */
+.week-view .all-day-view {
+    -fx-border-color: transparent transparent #3a3a3a transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+
+/* ---- Sidebar tray/drawer dark mode overrides (CalendarFX) ---- */
+.tray, .drawer,
+.tray .scroll-pane, .drawer .scroll-pane,
+.tray .scroll-pane > .viewport, .drawer .scroll-pane > .viewport,
+.tray .list-view, .drawer .list-view,
+.tray .list-view .list-cell, .drawer .list-view .list-cell,
+.tray .titled-pane, .drawer .titled-pane,
+.tray .titled-pane > .title, .drawer .titled-pane > .title,
+.tray .titled-pane > .content, .drawer .titled-pane > .content,
+.tray .month-view, .drawer .month-view,
+.tray .month-view .day-cell, .drawer .month-view .day-cell,
+.tray .month-view .week-number-cell, .drawer .month-view .week-number-cell,
+.tray .date-picker, .drawer .date-picker,
+.tray .date-picker .month-year-pane, .drawer .date-picker .month-year-pane,
+.tray .date-picker .calendar-grid, .drawer .date-picker .calendar-grid,
+.tray .date-picker .day-cell, .drawer .date-picker .day-cell,
+.tray .date-picker .week-number-cell, .drawer .date-picker .week-number-cell,
+.tray .date-picker .arrow-button, .drawer .date-picker .arrow-button,
+.tray .date-picker .text-field, .drawer .date-picker .text-field {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.tray .list-view .list-cell:selected, .drawer .list-view .list-cell:selected,
+.tray .date-picker .day-cell:hover, .drawer .date-picker .day-cell:hover,
+.tray .date-picker .day-cell:selected, .drawer .date-picker .day-cell:selected {
+    -fx-background-color: #395574;
+    -fx-text-fill: #ffffff;
+}
+.tray .month-view .day-cell.today, .drawer .month-view .day-cell.today { -fx-background-color: #354a5e; -fx-text-fill: #ffffff; }
+.tray .month-view .day-cell.weekend, .drawer .month-view .day-cell.weekend { -fx-background-color: #2d2d2d; -fx-text-fill: #e6e6e6; }
+
+
+/* ---- Extra broad CalendarFX sidebar guesses ---- */
+.calendar-view .drawer-pane, .calendar-view .tray-pane, .calendar-view .side-panel, .calendar-view .calendar-tray,
+.calendar-view .drawer-pane *, .calendar-view .tray-pane *, .calendar-view .side-panel *, .calendar-view .calendar-tray * {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+
+
+/* ---- YearMonthView (mini calendar in sidebar) ---- */
+.year-month-view,
+.year-month-view .container,
+.year-month-view .header,
+.year-month-view .month-header,
+.year-month-view .year-header {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e6e6e6;
+}
+.year-month-view .label { -fx-text-fill: #e6e6e6; }
+.year-month-view .day-of-week-label, .year-month-view .week-label { -fx-text-fill: #cfcfcf; }
+/* Date cells */
+.year-month-view .month-day { -fx-background-color: #2f2f2f; -fx-text-fill: #e6e6e6; }
+.year-month-view .month-day.today { -fx-background-color: #354a5e; -fx-text-fill: #ffffff; }
+.year-month-view .month-day.weekend-day { -fx-background-color: #2d2d2d; -fx-text-fill: #e6e6e6; }
+.year-month-view .month-day:selected { -fx-background-color: #395574; -fx-text-fill: #ffffff; }
+
+
+/* ---- Current date/month label coloring in headers (dark mode) ---- */
+/* Many CalendarFX headers use 'current-date-label' on month/year/day labels */
+.current-date-label { -fx-text-fill: #ff5a5a; }
+/* Page header labels back to neutral light color */
+.day-page .header .label, .week-page .header .label, .month-page .header .label, .year-page .header .label {
+    -fx-text-fill: #e6e6e6;
+}
+
+
+/* ---- Top-right large date title (CalendarFX uses Text node with class 'date-text') ---- */
+.date-text { -fx-fill: #ff5a5a; }

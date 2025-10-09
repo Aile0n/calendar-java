@@ -1,24 +1,24 @@
-import net.fortuna.ical4j.data.CalendarBuilder;
-import net.fortuna.ical4j.data.CalendarOutputter;
-import net.fortuna.ical4j.model.Calendar;
-import net.fortuna.ical4j.model.Component;
-import net.fortuna.ical4j.model.DateTime;
-import net.fortuna.ical4j.model.Property;
-import net.fortuna.ical4j.model.component.VEvent;
-import net.fortuna.ical4j.model.property.ProdId;
-import net.fortuna.ical4j.model.property.Uid;
-import net.fortuna.ical4j.util.RandomUidGenerator;
+import biweekly.Biweekly;
+import biweekly.ICalendar;
+import biweekly.component.VEvent;
+import biweekly.component.VAlarm;
+import biweekly.parameter.Related;
+import biweekly.property.*;
+import biweekly.util.Duration;
 
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
- * Hilfsklasse für den Import und Export von iCalendar-Dateien (ICS) mit ical4j.
+ * Hilfsklasse für den Import und Export von iCalendar-Dateien (ICS) mit Biweekly.
  * Bietet Methoden zum Einlesen von VEVENTs in CalendarEntry-Objekte und zum Schreiben
  * einer Liste von CalendarEntry als .ics-Datei.
  */
@@ -26,40 +26,120 @@ public class IcsUtil {
 
     public static List<CalendarEntry> importIcs(Path path) throws Exception {
         try (FileInputStream fis = new FileInputStream(path.toFile())) {
-            CalendarBuilder builder = new CalendarBuilder();
-            Calendar calendar = builder.build(fis);
-            List<CalendarEntry> entries = new ArrayList<>();
-            for (var component : calendar.getComponents(Component.VEVENT)) {
-                VEvent ev = (VEvent) component;
-                var start = ev.getStartDate().getDate();
-                var end = ev.getEndDate() != null ? ev.getEndDate().getDate() : null;
-                LocalDateTime startLdt = LocalDateTime.ofInstant(start.toInstant(), ZoneId.systemDefault());
-                LocalDateTime endLdt = end != null ? LocalDateTime.ofInstant(end.toInstant(), ZoneId.systemDefault()) : startLdt;
-                String summary = ev.getSummary() != null ? ev.getSummary().getValue() : "(Ohne Titel)";
-                String description = ev.getDescription() != null ? ev.getDescription().getValue() : "";
-                entries.add(new CalendarEntry(summary, description, startLdt, endLdt));
-            }
-            return entries;
+            return importIcs(fis);
         }
     }
 
-    public static void exportIcs(Path path, List<CalendarEntry> entries) throws Exception {
-        Calendar calendar = new Calendar();
-        calendar.getProperties().add(new ProdId("-//Calendar Java//iCal4j 3.x//EN"));
-        calendar.getProperties().add(net.fortuna.ical4j.model.property.Version.VERSION_2_0);
-        for (CalendarEntry entry : entries) {
-            java.util.Date start = java.util.Date.from(entry.getStart().atZone(ZoneId.systemDefault()).toInstant());
-            java.util.Date end = java.util.Date.from(entry.getEnd().atZone(ZoneId.systemDefault()).toInstant());
-            VEvent ev = new VEvent(new DateTime(start), new DateTime(end), entry.getTitle());
-            if (entry.getDescription() != null && !entry.getDescription().isBlank()) {
-                ev.getProperties().add(new net.fortuna.ical4j.model.property.Description(entry.getDescription()));
+    public static List<CalendarEntry> importIcsFromUrl(String url) throws Exception {
+        try (InputStream is = new URL(url).openStream()) {
+            return importIcs(is);
+        }
+    }
+
+    private static List<CalendarEntry> importIcs(InputStream is) throws Exception {
+        List<CalendarEntry> entries = new ArrayList<>();
+
+        List<ICalendar> calendars = Biweekly.parse(is).all();
+
+        for (ICalendar calendar : calendars) {
+            for (VEvent event : calendar.getEvents()) {
+                // Validate required fields
+                if (event.getDateStart() == null) {
+                    continue; // Skip events without start date
+                }
+
+                Date startDate = event.getDateStart().getValue();
+                Date endDate = event.getDateEnd() != null ? event.getDateEnd().getValue() : startDate;
+
+                LocalDateTime startLdt = LocalDateTime.ofInstant(startDate.toInstant(), ZoneId.systemDefault());
+                LocalDateTime endLdt = LocalDateTime.ofInstant(endDate.toInstant(), ZoneId.systemDefault());
+
+                String summary = event.getSummary() != null ? event.getSummary().getValue() : "(Ohne Titel)";
+                String description = event.getDescription() != null ? event.getDescription().getValue() : "";
+
+                CalendarEntry ce = new CalendarEntry(summary, description, startLdt, endLdt);
+
+                // Categories
+                List<Categories> categoriesList = event.getCategories();
+                if (categoriesList != null && !categoriesList.isEmpty()) {
+                    Categories categories = categoriesList.get(0);
+                    if (categories != null && !categories.getValues().isEmpty()) {
+                        ce.setCategory(categories.getValues().get(0));
+                    }
+                }
+
+                // VALARM -> reminder minutes
+                List<VAlarm> alarms = event.getAlarms();
+                if (!alarms.isEmpty()) {
+                    for (VAlarm alarm : alarms) {
+                        Trigger trigger = alarm.getTrigger();
+                        if (trigger != null && trigger.getDuration() != null) {
+                            Duration duration = trigger.getDuration();
+                            Integer mins = parseDurationToMinutes(duration);
+                            if (mins != null) {
+                                ce.setReminderMinutesBefore(mins);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                entries.add(ce);
             }
-            calendar.getComponents().add(ev);
         }
-        try (FileOutputStream fos = new FileOutputStream(path.toFile())) {
-            CalendarOutputter outputter = new CalendarOutputter();
-            outputter.output(calendar, fos);
+
+        return entries;
+    }
+
+    public static void exportIcs(Path path, List<CalendarEntry> entries) throws Exception {
+        if (entries == null) {
+            entries = new ArrayList<>();
         }
+        
+        ICalendar calendar = new ICalendar();
+        calendar.setProductId("-//Calendar Java//Biweekly//EN");
+
+        for (CalendarEntry entry : entries) {
+            if (entry == null || entry.getStart() == null || entry.getEnd() == null) {
+                continue; // Skip invalid entries
+            }
+            
+            VEvent event = new VEvent();
+
+            String title = entry.getTitle() != null ? entry.getTitle() : "(Ohne Titel)";
+            event.setSummary(title);
+
+            Date start = Date.from(entry.getStart().atZone(ZoneId.systemDefault()).toInstant());
+            Date end = Date.from(entry.getEnd().atZone(ZoneId.systemDefault()).toInstant());
+
+            event.setDateStart(start);
+            event.setDateEnd(end);
+
+            // Add UID
+            event.setUid(java.util.UUID.randomUUID().toString());
+
+            if (entry.getDescription() != null && !entry.getDescription().isBlank()) {
+                event.setDescription(entry.getDescription());
+            }
+
+            // Category
+            if (entry.getCategory() != null && !entry.getCategory().isBlank()) {
+                event.addCategories(entry.getCategory());
+            }
+
+            // Reminder via VALARM
+            if (entry.getReminderMinutesBefore() != null && entry.getReminderMinutesBefore() > 0) {
+                int minutes = entry.getReminderMinutesBefore();
+                Duration duration = new Duration.Builder().prior(true).minutes(minutes).build();
+                Trigger trigger = new Trigger(duration, (Related) null);
+                VAlarm alarm = VAlarm.display(trigger, "Erinnerung");
+                event.addAlarm(alarm);
+            }
+
+            calendar.addEvent(event);
+        }
+
+        Biweekly.write(calendar).go(path.toFile());
     }
 
     /**
@@ -78,14 +158,14 @@ public class IcsUtil {
      * Unterstützt DTSTART, DTEND, SUMMARY, DESCRIPTION.
      */
     public static List<CalendarEntry> importVcs(Path path) throws Exception {
-        java.util.List<String> raw = java.nio.file.Files.readAllLines(path);
-        java.util.List<String> lines = unfoldLines(raw);
-        java.util.List<CalendarEntry> result = new java.util.ArrayList<>();
+        List<String> raw = Files.readAllLines(path);
+        List<String> lines = unfoldLines(raw);
+        List<CalendarEntry> result = new ArrayList<>();
 
         String summary = null;
         String description = null;
-        java.time.LocalDateTime dtStart = null;
-        java.time.LocalDateTime dtEnd = null;
+        LocalDateTime dtStart = null;
+        LocalDateTime dtEnd = null;
         boolean inEvent = false;
 
         for (String line : lines) {
@@ -135,7 +215,7 @@ public class IcsUtil {
     /**
      * Schreibt eine einfache vCalendar (VCS 1.0) Datei mit VEVENTs.
      */
-    public static void exportVcs(Path path, java.util.List<CalendarEntry> entries) throws Exception {
+    public static void exportVcs(Path path, List<CalendarEntry> entries) throws Exception {
         StringBuilder sb = new StringBuilder();
         sb.append("BEGIN:VCALENDAR\r\n");
         sb.append("VERSION:1.0\r\n");
@@ -153,13 +233,13 @@ public class IcsUtil {
             sb.append("END:VEVENT\r\n");
         }
         sb.append("END:VCALENDAR\r\n");
-        java.nio.file.Files.writeString(path, sb.toString(), java.nio.charset.StandardCharsets.UTF_8);
+        Files.writeString(path, sb.toString(), java.nio.charset.StandardCharsets.UTF_8);
     }
 
     // --------- Hilfsmethoden für VCS ---------
 
-    private static java.util.List<String> unfoldLines(java.util.List<String> raw) {
-        java.util.List<String> out = new java.util.ArrayList<>();
+    private static List<String> unfoldLines(List<String> raw) {
+        List<String> out = new ArrayList<>();
         String prev = null;
         for (String line : raw) {
             if (line.startsWith(" ") || line.startsWith("\t")) {
@@ -180,21 +260,21 @@ public class IcsUtil {
         int semi = left.indexOf(';');
         if (semi >= 0) left = left.substring(0, semi);
         return left.toUpperCase(java.util.Locale.ROOT).trim();
-        }
+    }
 
     private static String getPropValue(String line) {
         int idx = line.indexOf(':');
         return idx >= 0 ? line.substring(idx + 1).trim() : "";
     }
 
-    private static java.time.LocalDateTime parseVCalDateTime(String value) {
+    private static LocalDateTime parseVCalDateTime(String value) {
         String v = value.trim();
         try {
             if (v.endsWith("Z")) {
                 String core = v.substring(0, v.length() - 1);
                 java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
-                java.time.LocalDateTime ldt = java.time.LocalDateTime.parse(core, dtf);
-                return ldt.atOffset(java.time.ZoneOffset.UTC).atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDateTime();
+                LocalDateTime ldt = LocalDateTime.parse(core, dtf);
+                return ldt.atOffset(java.time.ZoneOffset.UTC).atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
             }
             if (v.length() == 8) { // DATE
                 java.time.LocalDate ld = java.time.LocalDate.parse(v, java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
@@ -202,35 +282,58 @@ public class IcsUtil {
             }
             if (v.length() == 15 && v.charAt(8) == 'T') { // DATE-TIME
                 java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
-                return java.time.LocalDateTime.parse(v, dtf);
+                return LocalDateTime.parse(v, dtf);
             }
             // Fallback: try ISO
-            return java.time.LocalDateTime.parse(v);
+            return LocalDateTime.parse(v);
         } catch (Exception e) {
             // As last resort return now
-            return java.time.LocalDateTime.now();
+            return LocalDateTime.now();
         }
     }
 
-    private static String formatVCalDateTime(java.time.LocalDateTime ldt) {
+    private static String formatVCalDateTime(LocalDateTime ldt) {
         java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
         return ldt.format(dtf);
     }
 
     private static String escapeText(String s) {
-        String r = s.replace("\\", "\\\\")
+        return s.replace("\\", "\\\\")
                 .replace("\n", "\\n")
                 .replace("\r", "")
                 .replace(",", "\\,")
                 .replace(";", "\\;");
-        return r;
     }
 
     private static String unescapeText(String s) {
-        String r = s.replace("\\n", System.lineSeparator())
+        return s.replace("\\n", System.lineSeparator())
                 .replace("\\,", ",")
                 .replace("\\;", ";")
                 .replace("\\\\", "\\");
-        return r;
+    }
+
+    private static Integer parseDurationToMinutes(Duration duration) {
+        if (duration == null) return null;
+        try {
+            // Duration provides getWeeks(), getDays(), getHours(), getMinutes(), getSeconds()
+            int totalMinutes = 0;
+
+            if (duration.getWeeks() != null) {
+                totalMinutes += duration.getWeeks() * 7 * 24 * 60;
+            }
+            if (duration.getDays() != null) {
+                totalMinutes += duration.getDays() * 24 * 60;
+            }
+            if (duration.getHours() != null) {
+                totalMinutes += duration.getHours() * 60;
+            }
+            if (duration.getMinutes() != null) {
+                totalMinutes += duration.getMinutes();
+            }
+
+            return Math.abs(totalMinutes);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

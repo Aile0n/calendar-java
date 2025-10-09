@@ -8,12 +8,10 @@ import java.util.Properties;
 
 /**
  * Zentrale Konfigurationsverwaltung für die Anwendung.
- * Liest und schreibt Einstellungen wie Speicher-Modus (ICS/DB) und Pfade
+ * Liest und schreibt Einstellungen wie Pfade und Darstellung
  * aus/zu einer Properties-Datei (config.properties).
  */
 public class ConfigUtil {
-    public enum StorageMode { ICS, DB }
-
     private static final String FILE_NAME = "config.properties"; // prefer working directory
 
     private static Properties props;
@@ -43,35 +41,45 @@ public class ConfigUtil {
             } catch (Exception ignored) {}
         }
         // Defaults
-        if (p.getProperty("storage.mode") == null) {
-            p.setProperty("storage.mode", "ICS");
-        }
         if (p.getProperty("ics.path") == null) {
-            p.setProperty("ics.path", "calendar.ics");
+            // Default to working directory, or user home if working directory is not writable
+            String defaultPath = "calendar.ics";
+            Path testPath = Paths.get(defaultPath);
+            try {
+                // Test if we can write to the working directory
+                Path parent = testPath.getParent();
+                if (parent == null) {
+                    parent = Paths.get(".");
+                }
+                if (!Files.isWritable(parent)) {
+                    // Fallback to user home directory
+                    defaultPath = Paths.get(System.getProperty("user.home"), "calendar.ics").toString();
+                }
+            } catch (Exception ignored) {
+                // If we can't determine writability, try user home as safe fallback
+                defaultPath = Paths.get(System.getProperty("user.home"), "calendar.ics").toString();
+            }
+            p.setProperty("ics.path", defaultPath);
+        }
+        if (p.getProperty("ui.darkMode") == null) {
+            p.setProperty("ui.darkMode", "false");
         }
         props = p;
     }
 
     public static synchronized void save() throws Exception {
+        // Ensure parent directory exists
+        Path parent = externalConfigPath.getParent();
+        if (parent != null && !Files.exists(parent)) {
+            Files.createDirectories(parent);
+        }
+        // Create config file if it doesn't exist
         if (!Files.exists(externalConfigPath)) {
             Files.createFile(externalConfigPath);
         }
         try (FileOutputStream fos = new FileOutputStream(externalConfigPath.toFile())) {
             props.store(fos, "Application configuration");
         }
-    }
-
-    public static StorageMode getStorageMode() {
-        String mode = props.getProperty("storage.mode", "ICS").trim().toUpperCase();
-        try {
-            return StorageMode.valueOf(mode);
-        } catch (Exception e) {
-            return StorageMode.ICS;
-        }
-    }
-
-    public static void setStorageMode(StorageMode mode) {
-        props.setProperty("storage.mode", mode.name());
     }
 
     public static Path getIcsPath() {
@@ -82,7 +90,11 @@ public class ConfigUtil {
         props.setProperty("ics.path", path.toString());
     }
 
-    public static String getDbUrl() {
-        return props.getProperty("db.url");
+    public static boolean isDarkMode() {
+        return Boolean.parseBoolean(props.getProperty("ui.darkMode", "false"));
+    }
+
+    public static void setDarkMode(boolean dark) {
+        props.setProperty("ui.darkMode", Boolean.toString(dark));
     }
 }

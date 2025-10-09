@@ -11,9 +11,20 @@
                 <Button fx:id="newButton" text="Neuer Termin" />
                 <Button fx:id="importButton" text="Importieren (ICS/VCS)" />
                 <Button fx:id="exportButton" text="Exportieren (ICS/VCS)" />
+                <Separator />
+                <Button fx:id="exitButton" text="Beenden und Speichern" />
             </items>
         </ToolBar>
         <AnchorPane fx:id="calendarContainer" VBox.vgrow="ALWAYS" />
+        <ToolBar fx:id="bottomBar">
+            <items>
+                <Button fx:id="infoButton" text="ℹ Info" />
+                <Region HBox.hgrow="ALWAYS" />
+                <Label fx:id="statusLabel" text="Status: Initialisierung" style="-fx-text-fill: #666;" />
+                <Separator />
+                <Label fx:id="saveStatusLabel" text="💾 Gespeichert" style="-fx-text-fill: #666;" />
+            </items>
+        </ToolBar>
     </children>
     <padding>
         <Insets top="6" right="6" bottom="6" left="6" />
