@@ -204,6 +204,7 @@ public class CalendarProjektApp extends Application {
         });
     }
 
+    @SuppressWarnings("unchecked") // CalendarFX addEntry accepts raw Entry type
     private void loadFromDatabase() {
         fxCalendar.clear();
         if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
@@ -260,12 +261,12 @@ public class CalendarProjektApp extends Application {
      * (dragging, resizing, deleting, or editing entries) are captured
      * before exporting to ICS.
      */
+    @SuppressWarnings("unchecked") // CalendarFX findEntries returns raw List type
     private void rebuildCurrentEntriesFromUI() {
         currentEntries.clear();
         ZoneId zone = ZoneId.systemDefault();
-        for (Object obj : fxCalendar.findEntries("")) {
-            @SuppressWarnings("unchecked")
-            Entry<?> entry = (Entry<?>) obj;
+        List<Entry<?>> entries = fxCalendar.findEntries("");
+        for (Entry<?> entry : entries) {
             String title = entry.getTitle() != null ? entry.getTitle() : "(Ohne Titel)";
             String description = entry.getLocation() != null ? entry.getLocation() : "";
             LocalDateTime start = entry.getStartAsLocalDateTime();

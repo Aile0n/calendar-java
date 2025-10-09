@@ -1,4 +1,5 @@
 import com.calendarfx.model.Calendar;
+import com.calendarfx.model.CalendarEvent;
 import com.calendarfx.model.CalendarSource;
 import com.calendarfx.model.Entry;
 import com.calendarfx.view.CalendarView;
@@ -49,6 +50,7 @@ public class CalendarProjektController implements Initializable {
     private final List<CalendarEntry> currentEntries = new ArrayList<>();
 
     @Override
+    @SuppressWarnings("unchecked") // CalendarFX getCalendars/getCalendarSources return raw types
     public void initialize(URL location, ResourceBundle resources) {
         calendarView = new CalendarView();
         CalendarSource source = new CalendarSource("Meine Kalender");
@@ -120,6 +122,7 @@ public class CalendarProjektController implements Initializable {
         }
     }
 
+    @SuppressWarnings("unchecked") // CalendarFX addEntry accepts raw Entry type
     private void populateCalendar(List<CalendarEntry> items) {
         // clear all calendars
         fxCalendar.clear();
@@ -145,14 +148,14 @@ public class CalendarProjektController implements Initializable {
      * (dragging, resizing, deleting, or editing entries) are captured
      * before exporting to ICS.
      */
+    @SuppressWarnings("unchecked") // CalendarFX methods return raw types (findEntries, getCalendars, getCalendarSources)
     private void rebuildCurrentEntriesFromUI() {
         currentEntries.clear();
         // Collect entries from all calendars in the view
         for (CalendarSource source : calendarView.getCalendarSources()) {
             for (Calendar calendar : source.getCalendars()) {
-                for (Object obj : calendar.findEntries("")) {
-                    @SuppressWarnings("unchecked")
-                    Entry<?> entry = (Entry<?>) obj;
+                List<Entry<?>> entries = calendar.findEntries("");
+                for (Entry<?> entry : entries) {
                     String title = entry.getTitle() != null ? entry.getTitle() : "(Ohne Titel)";
                     String description = entry.getLocation() != null ? entry.getLocation() : "";
                     LocalDateTime start = entry.getStartAsLocalDateTime();
@@ -173,6 +176,7 @@ public class CalendarProjektController implements Initializable {
         }
     }
 
+    @SuppressWarnings("unchecked") // CalendarFX getCalendars returns raw ObservableList type
     private Calendar getOrCreateCalendar(String category) {
         if ("Allgemein".equalsIgnoreCase(category)) return fxCalendar;
         return categoryCalendars.computeIfAbsent(category, c -> {
@@ -212,7 +216,7 @@ public class CalendarProjektController implements Initializable {
      * Adds a listener to a calendar to detect entry changes and auto-save.
      */
     private void addCalendarListener(Calendar calendar) {
-        calendar.entriesProperty().addListener((javafx.collections.ListChangeListener<Entry<?>>) change -> {
+        calendar.addEventHandler(event -> {
             // Save to ICS when entries change (only in ICS mode)
             if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.ICS) {
                 saveCurrentEntriesToIcs();
