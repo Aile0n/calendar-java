@@ -89,14 +89,6 @@ public class CalendarProjektApp extends Application {
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
             applyThemeToDialog(dialog.getDialogPane());
 
-            javafx.scene.control.ToggleGroup group = new javafx.scene.control.ToggleGroup();
-            javafx.scene.control.RadioButton rbIcs = new javafx.scene.control.RadioButton("Speichern als ICS");
-            javafx.scene.control.RadioButton rbDb = new javafx.scene.control.RadioButton("Speichern in Datenbank");
-            rbIcs.setToggleGroup(group);
-            rbDb.setToggleGroup(group);
-            rbIcs.setSelected(ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.ICS);
-            rbDb.setSelected(ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB);
-
             TextField icsPathField = new TextField(ConfigUtil.getIcsPath().toString());
             Button browse = new Button("…");
             browse.setOnAction(ev -> {
@@ -110,29 +102,25 @@ public class CalendarProjektApp extends Application {
             grid.setHgap(10);
             grid.setVgap(10);
             grid.setStyle("-fx-padding: 10;");
-            grid.add(new Label("Speicher-Modus:"), 0, 0);
-            grid.add(rbIcs, 1, 0);
-            grid.add(rbDb, 2, 0);
-            grid.add(new Label("ICS-Datei:"), 0, 1);
-            grid.add(icsPathField, 1, 1);
-            grid.add(browse, 2, 1);
+            grid.add(new Label("ICS-Datei:"), 0, 0);
+            grid.add(icsPathField, 1, 0);
+            grid.add(browse, 2, 0);
 
             // Dark mode toggle
             Label displayLbl = new Label("Darstellung:");
             CheckBox darkMode = new CheckBox("Dunkelmodus");
             darkMode.setSelected(ConfigUtil.isDarkMode());
-            grid.add(displayLbl, 0, 2);
-            grid.add(darkMode, 1, 2);
+            grid.add(displayLbl, 0, 1);
+            grid.add(darkMode, 1, 1);
 
             dialog.getDialogPane().setContent(grid);
 
             var res = dialog.showAndWait();
             if (res.isPresent() && res.get() == ButtonType.OK) {
                 try {
-                    ConfigUtil.setStorageMode(rbIcs.isSelected() ? ConfigUtil.StorageMode.ICS : ConfigUtil.StorageMode.DB);
-                    if (rbIcs.isSelected()) {
-                        ConfigUtil.setIcsPath(new java.io.File(icsPathField.getText()).toPath());
-                    }
+                    // Force ICS mode
+                    ConfigUtil.setStorageMode(ConfigUtil.StorageMode.ICS);
+                    ConfigUtil.setIcsPath(new java.io.File(icsPathField.getText()).toPath());
                     // Save dark mode and apply immediately
                     ConfigUtil.setDarkMode(darkMode.isSelected());
                     applyTheme(primaryStage.getScene());
@@ -158,7 +146,25 @@ public class CalendarProjektApp extends Application {
         Button exportBtn = new Button("Exportieren (ICS/VCS)");
         exportBtn.setOnAction(e -> doExport(primaryStage));
 
-        toolBar.getItems().addAll(settingsButton, createBtn, importBtn, exportBtn);
+        // Exit and Save button
+        Button exitBtn = new Button("Beenden und Speichern");
+        exitBtn.setTooltip(new Tooltip("Kalender speichern und Anwendung beenden"));
+        exitBtn.setOnAction(e -> {
+            try {
+                // Save current entries to ICS file
+                if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.ICS) {
+                    IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
+                }
+                // Save configuration
+                ConfigUtil.save();
+                // Close application
+                Platform.exit();
+            } catch (Exception ex) {
+                showError("Fehler beim Speichern", ex);
+            }
+        });
+
+        toolBar.getItems().addAll(settingsButton, createBtn, importBtn, exportBtn, exitBtn);
 
         // Place toolbar above calendar view and add footer with Info button
         Button infoBtn = new Button("Info");
@@ -213,6 +219,10 @@ public class CalendarProjektApp extends Application {
             try {
                 currentEntries.clear();
                 var path = ConfigUtil.getIcsPath();
+                // Auto-create ICS file if it doesn't exist
+                if (!Files.exists(path)) {
+                    IcsUtil.exportIcs(path, new ArrayList<>());
+                }
                 if (Files.exists(path)) {
                     currentEntries.addAll(IcsUtil.importIcs(path));
                 }
