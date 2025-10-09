@@ -73,6 +73,9 @@ public class CalendarProjektController implements Initializable {
             exitButton.setOnAction(this::onExit);
         }
 
+        // Set up listeners for calendar entry changes to auto-save
+        setupCalendarListeners();
+
         // Load initial data (default ICS)
         reloadData();
     }
@@ -154,7 +157,17 @@ public class CalendarProjektController implements Initializable {
                     String description = entry.getLocation() != null ? entry.getLocation() : "";
                     LocalDateTime start = entry.getStartAsLocalDateTime();
                     LocalDateTime end = entry.getEndAsLocalDateTime();
-                    currentEntries.add(new CalendarEntry(title, description, start, end));
+                    CalendarEntry ce = new CalendarEntry(title, description, start, end);
+                    // Capture category from calendar name
+                    String calendarName = calendar.getName();
+                    if (calendarName != null && !calendarName.isEmpty() && !"Allgemein".equalsIgnoreCase(calendarName)) {
+                        ce.setCategory(calendarName);
+                    }
+                    // Capture recurrence rule if available
+                    if (entry.getRecurrenceRule() != null && !entry.getRecurrenceRule().isEmpty()) {
+                        ce.setRecurrenceRule(entry.getRecurrenceRule());
+                    }
+                    currentEntries.add(ce);
                 }
             }
         }
@@ -172,11 +185,53 @@ public class CalendarProjektController implements Initializable {
             for (CalendarSource src : calendarView.getCalendarSources()) {
                 if (!src.getCalendars().contains(cal)) {
                     src.getCalendars().add(cal);
+                    // Add listener to new calendar
+                    addCalendarListener(cal);
                     break;
                 }
             }
             return cal;
         });
+    }
+
+    /**
+     * Sets up listeners on all calendars to detect when entries are added, modified, or deleted
+     * via the CalendarFX UI. When changes are detected, the entries are saved to ICS (if in ICS mode).
+     */
+    private void setupCalendarListeners() {
+        // Add listener to the main calendar
+        addCalendarListener(fxCalendar);
+        
+        // Add listeners to any category calendars that might already exist
+        for (Calendar cal : categoryCalendars.values()) {
+            addCalendarListener(cal);
+        }
+    }
+
+    /**
+     * Adds a listener to a calendar to detect entry changes and auto-save.
+     */
+    private void addCalendarListener(Calendar calendar) {
+        calendar.entriesProperty().addListener((javafx.collections.ListChangeListener<Entry<?>>) change -> {
+            // Save to ICS when entries change (only in ICS mode)
+            if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.ICS) {
+                saveCurrentEntriesToIcs();
+            }
+        });
+    }
+
+    /**
+     * Saves the current UI entries to the ICS file.
+     * This is called automatically when entries are added, modified, or deleted via CalendarFX.
+     */
+    private void saveCurrentEntriesToIcs() {
+        try {
+            rebuildCurrentEntriesFromUI();
+            IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
+        } catch (Exception ex) {
+            // Log error but don't show to user for auto-save operations
+            System.err.println("Auto-save to ICS failed: " + ex.getMessage());
+        }
     }
 
     private void onNewEntry(ActionEvent evt) {
