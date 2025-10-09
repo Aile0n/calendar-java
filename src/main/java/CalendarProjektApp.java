@@ -30,6 +30,8 @@ import javafx.stage.Modality;
 import javafx.stage.FileChooser;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -153,6 +155,8 @@ public class CalendarProjektApp extends Application {
             try {
                 // Save current entries to ICS file
                 if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.ICS) {
+                    // Rebuild currentEntries from UI to capture any changes made via CalendarFX
+                    rebuildCurrentEntriesFromUI();
                     IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
                 }
                 // Save configuration
@@ -219,9 +223,20 @@ public class CalendarProjektApp extends Application {
             try {
                 currentEntries.clear();
                 var path = ConfigUtil.getIcsPath();
-                // Auto-create ICS file if it doesn't exist
+                // Auto-create ICS file if it doesn't exist and the directory is writable
                 if (!Files.exists(path)) {
-                    IcsUtil.exportIcs(path, new ArrayList<>());
+                    Path parent = path.getParent();
+                    if (parent == null) {
+                        parent = Paths.get(".");
+                    }
+                    // Only try to create if parent directory exists and is writable
+                    if (Files.exists(parent) && Files.isWritable(parent)) {
+                        try {
+                            IcsUtil.exportIcs(path, new ArrayList<>());
+                        } catch (Exception createEx) {
+                            // If creation fails, just skip it - file will be created on first save
+                        }
+                    }
                 }
                 if (Files.exists(path)) {
                     currentEntries.addAll(IcsUtil.importIcs(path));
@@ -236,6 +251,24 @@ public class CalendarProjektApp extends Application {
             } catch (Exception ex) {
                 showError("Fehler beim Laden aus ICS", ex);
             }
+        }
+    }
+
+    /**
+     * Rebuilds the currentEntries list from the CalendarFX UI state.
+     * This ensures that any changes made directly in the CalendarFX UI
+     * (dragging, resizing, deleting, or editing entries) are captured
+     * before exporting to ICS.
+     */
+    private void rebuildCurrentEntriesFromUI() {
+        currentEntries.clear();
+        ZoneId zone = ZoneId.systemDefault();
+        for (Entry<?> entry : fxCalendar.findEntries("")) {
+            String title = entry.getTitle() != null ? entry.getTitle() : "(Ohne Titel)";
+            String description = entry.getLocation() != null ? entry.getLocation() : "";
+            LocalDateTime start = entry.getStartAsLocalDateTime();
+            LocalDateTime end = entry.getEndAsLocalDateTime();
+            currentEntries.add(new CalendarEntry(title, description, start, end));
         }
     }
 
@@ -279,6 +312,8 @@ public class CalendarProjektApp extends Application {
             if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
                 items = dao.findAll();
             } else {
+                // Rebuild currentEntries from UI to capture any changes made via CalendarFX
+                rebuildCurrentEntriesFromUI();
                 items = new ArrayList<>(currentEntries);
             }
             java.nio.file.Path out = file.toPath();

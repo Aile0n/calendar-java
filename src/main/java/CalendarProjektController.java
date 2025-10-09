@@ -91,9 +91,20 @@ public class CalendarProjektController implements Initializable {
             try {
                 currentEntries.clear();
                 var path = ConfigUtil.getIcsPath();
-                // Auto-create ICS file if it doesn't exist
+                // Auto-create ICS file if it doesn't exist and the directory is writable
                 if (!Files.exists(path)) {
-                    IcsUtil.exportIcs(path, new ArrayList<>());
+                    java.nio.file.Path parent = path.getParent();
+                    if (parent == null) {
+                        parent = java.nio.file.Paths.get(".");
+                    }
+                    // Only try to create if parent directory exists and is writable
+                    if (Files.exists(parent) && Files.isWritable(parent)) {
+                        try {
+                            IcsUtil.exportIcs(path, new ArrayList<>());
+                        } catch (Exception createEx) {
+                            // If creation fails, just skip it - file will be created on first save
+                        }
+                    }
                 }
                 if (Files.exists(path)) {
                     currentEntries.addAll(IcsUtil.importIcs(path));
@@ -122,6 +133,28 @@ public class CalendarProjektController implements Initializable {
             String cat = (ce.getCategory() == null || ce.getCategory().isBlank()) ? "Allgemein" : ce.getCategory();
             Calendar target = getOrCreateCalendar(cat);
             target.addEntry(entry);
+        }
+    }
+
+    /**
+     * Rebuilds the currentEntries list from the CalendarFX UI state.
+     * This ensures that any changes made directly in the CalendarFX UI
+     * (dragging, resizing, deleting, or editing entries) are captured
+     * before exporting to ICS.
+     */
+    private void rebuildCurrentEntriesFromUI() {
+        currentEntries.clear();
+        // Collect entries from all calendars in the view
+        for (CalendarSource source : calendarView.getCalendarSources()) {
+            for (Calendar calendar : source.getCalendars()) {
+                for (Entry<?> entry : calendar.findEntries("")) {
+                    String title = entry.getTitle() != null ? entry.getTitle() : "(Ohne Titel)";
+                    String description = entry.getLocation() != null ? entry.getLocation() : "";
+                    LocalDateTime start = entry.getStartAsLocalDateTime();
+                    LocalDateTime end = entry.getEndAsLocalDateTime();
+                    currentEntries.add(new CalendarEntry(title, description, start, end));
+                }
+            }
         }
     }
 
@@ -272,6 +305,8 @@ public class CalendarProjektController implements Initializable {
             if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.DB) {
                 items = dao.findAll();
             } else {
+                // Rebuild currentEntries from UI to capture any changes made via CalendarFX
+                rebuildCurrentEntriesFromUI();
                 items = new ArrayList<>(currentEntries);
             }
             java.nio.file.Path out = file.toPath();
@@ -412,6 +447,8 @@ public class CalendarProjektController implements Initializable {
         try {
             // Save current entries to ICS file
             if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.ICS) {
+                // Rebuild currentEntries from UI to capture any changes made via CalendarFX
+                rebuildCurrentEntriesFromUI();
                 IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
             }
             // Save configuration
