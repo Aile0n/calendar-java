@@ -157,7 +157,17 @@ public class CalendarProjektController implements Initializable {
                     String description = entry.getLocation() != null ? entry.getLocation() : "";
                     LocalDateTime start = entry.getStartAsLocalDateTime();
                     LocalDateTime end = entry.getEndAsLocalDateTime();
-                    currentEntries.add(new CalendarEntry(title, description, start, end));
+                    CalendarEntry ce = new CalendarEntry(title, description, start, end);
+                    // Capture category from calendar name
+                    String calendarName = calendar.getName();
+                    if (calendarName != null && !calendarName.isEmpty() && !"Allgemein".equalsIgnoreCase(calendarName)) {
+                        ce.setCategory(calendarName);
+                    }
+                    // Capture recurrence rule if available
+                    if (entry.getRecurrenceRule() != null && !entry.getRecurrenceRule().isEmpty()) {
+                        ce.setRecurrenceRule(entry.getRecurrenceRule());
+                    }
+                    currentEntries.add(ce);
                 }
             }
         }
