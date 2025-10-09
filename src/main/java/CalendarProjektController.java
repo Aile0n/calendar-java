@@ -147,7 +147,9 @@ public class CalendarProjektController implements Initializable {
         // Collect entries from all calendars in the view
         for (CalendarSource source : calendarView.getCalendarSources()) {
             for (Calendar calendar : source.getCalendars()) {
-                for (Entry<?> entry : calendar.findEntries("")) {
+                for (Object obj : calendar.findEntries("")) {
+                    @SuppressWarnings("unchecked")
+                    Entry<?> entry = (Entry<?>) obj;
                     String title = entry.getTitle() != null ? entry.getTitle() : "(Ohne Titel)";
                     String description = entry.getLocation() != null ? entry.getLocation() : "";
                     LocalDateTime start = entry.getStartAsLocalDateTime();
