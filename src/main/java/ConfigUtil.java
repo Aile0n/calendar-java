@@ -51,7 +51,24 @@ public class ConfigUtil {
             p.setProperty("storage.mode", "ICS");
         }
         if (p.getProperty("ics.path") == null) {
-            p.setProperty("ics.path", "calendar.ics");
+            // Default to working directory, or user home if working directory is not writable
+            String defaultPath = "calendar.ics";
+            Path testPath = Paths.get(defaultPath);
+            try {
+                // Test if we can write to the working directory
+                Path parent = testPath.getParent();
+                if (parent == null) {
+                    parent = Paths.get(".");
+                }
+                if (!Files.isWritable(parent)) {
+                    // Fallback to user home directory
+                    defaultPath = Paths.get(System.getProperty("user.home"), "calendar.ics").toString();
+                }
+            } catch (Exception ignored) {
+                // If we can't determine writability, try user home as safe fallback
+                defaultPath = Paths.get(System.getProperty("user.home"), "calendar.ics").toString();
+            }
+            p.setProperty("ics.path", defaultPath);
         }
         if (p.getProperty("ui.darkMode") == null) {
             p.setProperty("ui.darkMode", "false");

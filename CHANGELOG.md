@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+- Fixed critical persistence bug where CalendarFX UI changes (drag, resize, delete, edit) were lost on save/exit because only the stale `currentEntries` list was exported, not the current UI state from `fxCalendar`.
+- Added `rebuildCurrentEntriesFromUI()` helper method to both `CalendarProjektApp` and `CalendarProjektController` to sync UI changes back to the persistent list before export.
+- Updated "Beenden & Speichern" (Exit & Save) button and export functionality to rebuild entries from CalendarFX UI before writing to ICS file.
+- Improved default ICS file path logic to fallback to user home directory if working directory is not writable, preventing startup failures in read-only installation directories.
+- Added write permission checks before attempting to auto-create ICS files, preventing errors when launched from read-only locations like Program Files.
+
 ## [0.1.1] - 2025-10-08
 
 ### Added
