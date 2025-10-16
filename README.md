@@ -1,6 +1,28 @@
-# Calendar Java (JavaFX + CalendarFX)
+# Calendar Java (JavaFX + CalendarFX + Web)
 
-A simple desktop calendar application built with JavaFX and CalendarFX. It imports and exports events in iCalendar (.ics) and vCalendar (.vcs) formats. Persistence is ICS-only.
+A calendar application available in two versions:
+1. **Desktop Version**: Built with JavaFX and CalendarFX (requires Java 21)
+2. **Web Version**: Modern web interface with Spring Boot (requires Java 17)
+
+Both versions import and export events in iCalendar (.ics) and vCalendar (.vcs) formats. Persistence is ICS-only and shared between versions.
+
+## 🌐 Web Version (NEW!)
+
+Start the web application:
+```bash
+mvn spring-boot:run
+# or
+mvn clean package -DskipTests
+java -jar target/calendar-java-1.0-SNAPSHOT.jar
+```
+
+Access the web interface at: **http://localhost:8080**
+
+See [WEB_README.md](WEB_README.md) for complete web version documentation.
+
+![Calendar Web Interface](https://github.com/user-attachments/assets/d95a2108-4278-4cd1-b996-d8286149544f)
+
+## 🖥️ Desktop Version
 
 The UI is localized in German and provides buttons for creating events, importing/exporting, choosing the ICS file path, and toggling dark mode.
 
@@ -9,18 +31,35 @@ For an end-to-end creation story and build steps in German, see PROJEKT_ERSTELLU
 
 
 ## Tech Stack
+
+### Web Version
+- Language: Java 17
+- Build tool: Apache Maven
+- Framework: Spring Boot 3.1.5
+- Frontend: HTML5, CSS3, Vanilla JavaScript
+- Calendar parsing: ical4j 4.x (ICS) + Biweekly (VCS)
+- Testing: JUnit Jupiter (JUnit 5)
+
+### Desktop Version
 - Language: Java 21
 - Build tool: Apache Maven
 - UI: JavaFX 22 (controls, FXML)
 - Calendar UI: CalendarFX 12
-- Calendar parsing: ical4j 3.x (ICS) + minimal VCS support
+- Calendar parsing: ical4j 4.x (ICS) + Biweekly (VCS)
 - Testing: JUnit Jupiter (JUnit 5)
-- Packaging: Maven Shade Plugin (fat JAR with `Main-Class: org.example.Main`)
+- Packaging: Maven Shade Plugin (fat JAR)
 
 See `pom.xml` for exact versions and plugins.
 
 
 ## Requirements
+
+### Web Version
+- JDK 17+
+- Maven 3.9+
+- Modern web browser
+
+### Desktop Version
 - JDK 21+
 - Maven 3.9+
 - OS with JavaFX support (Windows/macOS/Linux)
@@ -32,7 +71,26 @@ Notes about JavaFX:
 
 ## Getting Started
 
-### Clone
+### Web Version (Recommended)
+```bash
+# Clone
+git clone <this-repo-url>
+cd calendar-java
+
+# Build and run
+mvn spring-boot:run
+
+# Or build JAR and run
+mvn clean package -DskipTests
+java -jar target/calendar-java-1.0-SNAPSHOT.jar
+```
+
+Open browser at: http://localhost:8080
+
+### Desktop Version
+
+**Note:** The desktop version requires Java 21 due to CalendarFX dependency. If you have Java 17, use the web version instead.
+
 ```
 git clone <this-repo-url>
 cd calendar-java
