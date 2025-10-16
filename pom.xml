@@ -98,7 +98,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring.boot.version}</version>
                 <configuration>
-                    <mainClass>CalendarWebApp</mainClass>
+                    <mainClass>com.calendar.web.CalendarWebApp</mainClass>
                 </configuration>
             </plugin>
             <!-- Run JUnit 5 tests -->
@@ -129,7 +129,7 @@
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>CalendarWebApp</mainClass>
+                                    <mainClass>com.calendar.web.CalendarWebApp</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
