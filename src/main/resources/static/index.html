@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Java - Web Interface</title>
+    <link rel="stylesheet" href="calendar.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📅 Calendar Java - Web Interface</h1>
+            <div class="header-buttons">
+                <button id="darkModeToggle" class="btn btn-secondary">🌙 Dunkelmodus</button>
+                <button id="exportBtn" class="btn btn-secondary">⬇️ Exportieren</button>
+                <button id="refreshBtn" class="btn btn-secondary">🔄 Aktualisieren</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <button id="newEntryBtn" class="btn btn-primary">➕ Neuer Termin</button>
+                <div class="toolbar-right">
+                    <input type="file" id="importFile" accept=".ics,.vcs" style="display: none;">
+                    <button id="importBtn" class="btn btn-secondary">📥 Importieren</button>
+                    <span id="statusLabel" class="status-label">Status: Bereit</span>
+                </div>
+            </div>
+
+            <!-- Calendar View -->
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <button id="prevMonth" class="btn-nav">‹</button>
+                    <h2 id="currentMonth"></h2>
+                    <button id="nextMonth" class="btn-nav">›</button>
+                </div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
+
+            <!-- Events List -->
+            <div class="events-section">
+                <h2>📋 Terminliste</h2>
+                <div id="eventsList" class="events-list"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for New/Edit Entry -->
+    <div id="entryModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Neuer Termin</h2>
+            <form id="entryForm">
+                <div class="form-group">
+                    <label for="entryTitle">Titel:</label>
+                    <input type="text" id="entryTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="entryDescription">Beschreibung:</label>
+                    <textarea id="entryDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="entryStartDate">Start (Datum):</label>
+                    <input type="date" id="entryStartDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="entryStartTime">Start (Zeit):</label>
+                    <input type="time" id="entryStartTime" value="09:00" required>
+                </div>
+                <div class="form-group">
+                    <label for="entryEndDate">Ende (Datum):</label>
+                    <input type="date" id="entryEndDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="entryEndTime">Ende (Zeit):</label>
+                    <input type="time" id="entryEndTime" value="10:00" required>
+                </div>
+                <div class="form-group">
+                    <label for="entryCategory">Kategorie:</label>
+                    <input type="text" id="entryCategory" placeholder="z.B. Arbeit, Privat">
+                </div>
+                <div class="form-group">
+                    <label for="entryReminder">Erinnerung (Minuten vorher):</label>
+                    <input type="number" id="entryReminder" min="0" placeholder="z.B. 15">
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                    <button type="button" id="cancelBtn" class="btn btn-secondary">Abbrechen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="calendar.js"></script>
+</body>
+</html>
