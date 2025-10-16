@@ -9,31 +9,41 @@
     <version>1.0.1-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>22.0.1</javafx.version>
         <calendarfx.version>12.0.1</calendarfx.version>
+        <spring.boot.version>3.1.5</spring.boot.version>
     </properties>
 
     <dependencies>
+        <!-- Spring Boot Starter Web -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>${spring.boot.version}</version>
+        </dependency>
         <!-- CalendarFX -->
         <dependency>
             <groupId>com.calendarfx</groupId>
             <artifactId>view</artifactId>
             <version>${calendarfx.version}</version>
+            <optional>true</optional>
         </dependency>
         <!-- JavaFX Controls -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
             <version>${javafx.version}</version>
+            <optional>true</optional>
         </dependency>
         <!-- JavaFX FXML -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>${javafx.version}</version>
+            <optional>true</optional>
         </dependency>
         <!-- iCalendar (ICS) library upgraded to 4.x -->
         <dependency>
@@ -54,10 +64,43 @@
             <version>5.10.2</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <version>${spring.boot.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <!-- Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <!-- Exclude JavaFX-dependent classes that require Java 21 -->
+                    <excludes>
+                        <exclude>**/CalendarFxmlApp.java</exclude>
+                        <exclude>**/CalendarProjektApp.java</exclude>
+                        <exclude>**/CalendarProjektController.java</exclude>
+                        <exclude>**/org/example/Main.java</exclude>
+                    </excludes>
+                    <testExcludes>
+                        <testExclude>**/CalendarUiPersistenceTest.java</testExclude>
+                    </testExcludes>
+                </configuration>
+            </plugin>
+            <!-- Spring Boot Maven Plugin -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring.boot.version}</version>
+                <configuration>
+                    <mainClass>com.calendar.web.CalendarWebApp</mainClass>
+                </configuration>
+            </plugin>
             <!-- Run JUnit 5 tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -65,6 +108,10 @@
                 <version>3.2.5</version>
                 <configuration>
                     <useModulePath>false</useModulePath>
+                    <!-- Exclude JavaFX-dependent tests -->
+                    <excludes>
+                        <exclude>**/CalendarUiPersistenceTest.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
             <!-- Create a runnable fat JAR -->
@@ -82,7 +129,7 @@
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.example.Main</mainClass>
+                                    <mainClass>com.calendar.web.CalendarWebApp</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

@@ -1,0 +1,438 @@
+:root {
+    --primary-color: #2196F3;
+    --secondary-color: #757575;
+    --success-color: #4CAF50;
+    --danger-color: #F44336;
+    --background-color: #f5f5f5;
+    --surface-color: #ffffff;
+    --text-color: #212121;
+    --text-secondary: #757575;
+    --border-color: #e0e0e0;
+    --hover-color: #f5f5f5;
+}
+
+body.dark-mode {
+    --background-color: #1e1e1e;
+    --surface-color: #2d2d2d;
+    --text-color: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --border-color: #404040;
+    --hover-color: #383838;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 30px;
+}
+
+header h1 {
+    font-size: 28px;
+    color: var(--text-color);
+}
+
+.header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: var(--surface-color);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.status-label {
+    color: var(--text-secondary);
+    font-size: 14px;
+    padding: 5px 10px;
+    background: var(--hover-color);
+    border-radius: 4px;
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1976D2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #616161;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(117, 117, 117, 0.3);
+}
+
+.btn-nav {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.btn-nav:hover {
+    background: var(--hover-color);
+}
+
+/* Calendar Container */
+.calendar-container {
+    background: var(--surface-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.calendar-header h2 {
+    font-size: 22px;
+    color: var(--text-color);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--surface-color);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-day:hover {
+    background: var(--hover-color);
+    transform: scale(1.05);
+}
+
+.calendar-day.today {
+    border: 2px solid var(--primary-color);
+    background: rgba(33, 150, 243, 0.1);
+}
+
+.calendar-day.has-events {
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.day-number {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.day-name {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.day-events {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.day-event-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    display: inline-block;
+    margin: 2px;
+}
+
+/* Events Section */
+.events-section {
+    background: var(--surface-color);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.events-section h2 {
+    margin-bottom: 20px;
+    font-size: 22px;
+}
+
+.events-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.event-item {
+    background: var(--hover-color);
+    border-left: 4px solid var(--primary-color);
+    padding: 15px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.event-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.event-item.category-work {
+    border-left-color: #FF9800;
+}
+
+.event-item.category-personal {
+    border-left-color: #9C27B0;
+}
+
+.event-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 8px;
+}
+
+.event-time {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+
+.event-description {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.event-category {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-right: 8px;
+}
+
+.event-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.event-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal.show {
+    display: block;
+}
+
+.modal-content {
+    background-color: var(--surface-color);
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.close {
+    color: var(--text-secondary);
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.close:hover {
+    color: var(--text-color);
+}
+
+.modal-content h2 {
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--background-color);
+    color: var(--text-color);
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .calendar-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .toolbar {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .toolbar-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 480px) {
+    .calendar-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Loading spinner */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--border-color);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
