@@ -40,8 +40,12 @@ Eine vollständige Web-Version der Kalenderanwendung wurde erfolgreich implement
 
 3. **Minimale Änderungen**:
    - Desktop-Version bleibt intakt
-   - Bestehende Utility-Klassen wiederverwendet
+   - Utility-Klassen wurden in das Web-Package kopiert
    - ICS-Persistenz funktioniert für beide Versionen
+   
+   **Hinweis**: Die Utility-Klassen (CalendarEntry, ConfigUtil, IcsUtil) wurden kopiert statt geteilt,
+   um minimale Änderungen am bestehenden Code zu gewährleisten. Für Produktionsumgebungen sollte 
+   ein gemeinsames Package erstellt werden, auf das beide Versionen zugreifen.
 
 ## Verwendung
 
