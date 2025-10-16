@@ -24,63 +24,131 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 
 /**
- * JavaFX-Controller für die FXML-Ansicht. Verknüpft Buttons und Kalenderansicht
- * (CalendarFX) mit der Anwendungslogik. Persistenz erfolgt ausschließlich über ICS.
+ * JavaFX-Controller für die FXML-Ansicht.
+ *
+ * Diese Klasse ist das "Gehirn" der Benutzeroberfläche.
+ * Sie verbindet die Buttons und UI-Elemente aus der calendar_view.fxml Datei
+ * mit der eigentlichen Programmlogik.
+ *
+ * Wichtige Aufgaben:
+ * - Lädt Termine aus der ICS-Datei und zeigt sie im Kalender an
+ * - Reagiert auf Button-Klicks (Neuer Termin, Import, Export, etc.)
+ * - Speichert Änderungen automatisch zurück in die ICS-Datei
+ * - Verwaltet Kategorien und Erinnerungen
  */
 public class CalendarProjektController implements Initializable {
 
-    @FXML private AnchorPane calendarContainer;
-    @FXML private Button newButton;
-    @FXML private Button importButton;
-    @FXML private Button exportButton;
-    @FXML private Button settingsButton;
-    @FXML private Button exitButton;
-    @FXML private Button infoButton; // Info-Button in der unteren Leiste
-    @FXML private Label statusLabel; // neu für Statusanzeige
-    @FXML private Label saveStatusLabel; // neu für Speicher-Statusanzeige
-    @FXML private Button manualSaveButton; // optionaler manueller Speichern-Button (wird dynamisch angelegt falls nicht vorhanden)
+    // --- UI-Elemente aus der FXML-Datei ---
+    // @FXML bedeutet: Diese Elemente werden automatisch mit der FXML-Datei verknüpft
 
+    /** Der Container, in dem die Kalenderansicht angezeigt wird */
+    @FXML private AnchorPane calendarContainer;
+
+    /** Button zum Erstellen eines neuen Termins */
+    @FXML private Button newButton;
+
+    /** Button zum Importieren von Kalenderdateien */
+    @FXML private Button importButton;
+
+    /** Button zum Exportieren von Kalenderdateien */
+    @FXML private Button exportButton;
+
+    /** Button für die Einstellungen */
+    @FXML private Button settingsButton;
+
+    /** Button zum Beenden der Anwendung */
+    @FXML private Button exitButton;
+
+    /** Info-Button in der unteren Leiste */
+    @FXML private Button infoButton;
+
+    /** Label für allgemeine Statusmeldungen */
+    @FXML private Label statusLabel;
+
+    /** Label speziell für Speicher-Status */
+    @FXML private Label saveStatusLabel;
+
+    /** Optionaler Button zum manuellen Speichern (wird ggf. dynamisch angelegt) */
+    @FXML private Button manualSaveButton;
+
+    // --- Interne Variablen ---
+
+    /** Die CalendarFX-Komponente, die den Kalender visuell darstellt */
     private CalendarView calendarView;
+
+    /** Der Standard-Kalender für allgemeine Termine */
     private final Calendar<String> fxCalendar = new Calendar<>("Allgemein");
+
+    /** Eine Map (Zuordnung) von Kategorie-Namen zu Kalendern */
     private final java.util.Map<String, Calendar<String>> categoryCalendars = new java.util.HashMap<>();
 
+    /** Die Zeitzone des Systems (z.B. "Europe/Berlin") */
     private final ZoneId zone = ZoneId.systemDefault();
 
-    // ICS-State
+    /** Liste aller aktuell geladenen Termine (wird in ICS-Datei gespeichert) */
     private final List<CalendarEntry> currentEntries = new ArrayList<>();
 
-    // Simple UI debug logger
+    // --- Debug und Status-Flags ---
+
+    /** Verhindert, dass beim Laden der Daten versehentlich alles gelöscht wird */
+    private boolean suppressAutoSave = true;
+
+    /** Wurde die initiale Datenladung abgeschlossen? */
+    private boolean initialLoadCompleted = false;
+
+    /** Wie viele Einträge wurden zuletzt gespeichert? (zum Vergleich) */
+    private int lastSavedCount = -1;
+
+    /** Verhindert, dass Listener mehrfach registriert werden */
+    private boolean calendarEventsHooked = false;
+
+    /**
+     * Hilfsmethode zum Loggen von Debug-Meldungen.
+     * Schreibt formatierte Meldungen in die Konsole.
+     *
+     * @param action Was passiert gerade (z.B. "INIT", "SAVE")
+     * @param msg Die detaillierte Nachricht
+     */
     private void log(String action, String msg) {
         System.out.println("[UI_DEBUG] " + action + " | " + msg);
     }
 
-    private boolean suppressAutoSave = true; // verhindert initiales Leerspeichern
-    private boolean initialLoadCompleted = false;
-    private int lastSavedCount = -1;
-    private boolean calendarEventsHooked = false; // verhindert mehrfaches Registrieren
-
+    /**
+     * Initialize wird automatisch von JavaFX aufgerufen, nachdem die FXML geladen wurde.
+     * Hier bauen wir die Benutzeroberfläche auf und laden die gespeicherten Termine.
+     *
+     * @param location Die URL der FXML-Datei (wird automatisch übergeben)
+     * @param resources Sprachressourcen (wird automatisch übergeben)
+     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         log("INIT", "Starte Initialisierung");
         setStatus("Status: Initialisierung");
 
-        // Locale auf Deutsch setzen für CalendarFX
+        // Stelle die Sprache auf Deutsch um (für Datums- und Zeitformate)
         java.util.Locale.setDefault(java.util.Locale.GERMANY);
 
+        // Erstelle die CalendarFX-Komponente (die eigentliche Kalenderansicht)
         calendarView = new CalendarView();
 
+        // Erstelle eine "Kalenderquelle" und füge unseren Standard-Kalender hinzu
+        // (CalendarFX kann mehrere Kalender gleichzeitig anzeigen)
         CalendarSource source = new CalendarSource("Meine Kalender");
         source.getCalendars().add(fxCalendar);
         calendarView.getCalendarSources().add(source);
+
+        // Wenn das Design geändert wird (Hell-/Dunkelmodus), passe es an
         calendarContainer.sceneProperty().addListener((obs, oldS, newS) -> applyTheme());
         applyTheme();
 
+        // Füge die Kalenderansicht zum Container hinzu und lasse sie den ganzen Platz nutzen
         AnchorPane.setTopAnchor(calendarView, 0.0);
         AnchorPane.setRightAnchor(calendarView, 0.0);
         AnchorPane.setBottomAnchor(calendarView, 0.0);
         AnchorPane.setLeftAnchor(calendarView, 0.0);
         calendarContainer.getChildren().add(calendarView);
 
+        // Verbinde alle Buttons mit ihren Aktionen (was passiert beim Klick?)
         newButton.setOnAction(this::onNewEntry);
         importButton.setOnAction(this::onImport);
         exportButton.setOnAction(this::onExport);
@@ -92,14 +160,20 @@ public class CalendarProjektController implements Initializable {
             infoButton.setOnAction(this::onInfo);
         }
 
+        // Richte Listener ein, die automatisch speichern, wenn sich etwas ändert
         setupCalendarListeners();
+
+        // Lade die gespeicherten Termine aus der ICS-Datei
         reloadData();
+
+        // Initialisierung abgeschlossen - ab jetzt automatisch speichern
         initialLoadCompleted = true;
         suppressAutoSave = false;
         startAutosaveMonitor();
         setStatus("Status: Geladen (" + currentEntries.size() + ")");
         log("INIT", "Initialisierung abgeschlossen");
 
+        // Versuche, einen manuellen Speichern-Button hinzuzufügen
         calendarContainer.sceneProperty().addListener((o, oldS, newS) -> {
             if (newS != null) {
                 javafx.application.Platform.runLater(this::ensureManualSaveButton);
@@ -107,16 +181,26 @@ public class CalendarProjektController implements Initializable {
         });
     }
 
+    /**
+     * Aktualisiert die Statusanzeige im UI.
+     *
+     * @param text Der anzuzeigende Text (z.B. "Status: Geladen (5)")
+     */
     private void setStatus(String text) {
         if (statusLabel != null) {
             statusLabel.setText(text);
         }
     }
 
+    /**
+     * Aktualisiert die Speicher-Statusanzeige und färbt sie entsprechend ein.
+     *
+     * @param text Der anzuzeigende Text (z.B. "Gespeichert" oder "Fehler")
+     */
     private void setSaveStatus(String text) {
         if (saveStatusLabel != null) {
             saveStatusLabel.setText("💾 " + text);
-            // Farbe auf Grün setzen bei Erfolg, Rot bei Fehler
+            // Farbe anpassen: Grün bei Erfolg, Rot bei Fehler
             if (text.contains("erfolgreich") || text.equals("Gespeichert")) {
                 saveStatusLabel.setStyle("-fx-text-fill: #4CAF50;");
             } else if (text.contains("Fehler")) {
@@ -127,10 +211,15 @@ public class CalendarProjektController implements Initializable {
         }
     }
 
+    /**
+     * Stellt sicher, dass ein manueller Speichern-Button vorhanden ist.
+     * Falls er in der FXML fehlt, wird er dynamisch hinzugefügt.
+     */
     private void ensureManualSaveButton() {
         try {
-            if (manualSaveButton != null) return; // bereits vorhanden via FXML
-            // Toolbar finden
+            if (manualSaveButton != null) return; // Bereits vorhanden via FXML
+
+            // Suche die Toolbar im UI
             var tb = calendarContainer.getScene().lookup("#toolBar");
             if (tb instanceof ToolBar toolBar) {
                 manualSaveButton = new Button("Speichern");
@@ -143,101 +232,167 @@ public class CalendarProjektController implements Initializable {
         }
     }
 
+    /**
+     * Wird aufgerufen, wenn der Benutzer auf den manuellen Speichern-Button klickt.
+     */
     private void manualSaveAction() {
         log("MANUAL_SAVE", "Benutzer ausgelöst");
         saveCurrentEntriesToIcs();
     }
 
+    /**
+     * Lädt alle Termine neu aus der ICS-Datei.
+     * Dies geschieht beim Start und nach dem Ändern der Einstellungen.
+     */
     private void reloadData() {
-        suppressAutoSave = true; // während Laden nichts speichern / syncen
+        suppressAutoSave = true; // Während dem Laden nichts automatisch speichern!
         log("RELOAD", "Lade Daten (ICS)");
+
+        // Lösche alle aktuell angezeigten Termine
         fxCalendar.clear();
         for (Calendar<String> cal : categoryCalendars.values()) cal.clear();
+
         try {
             currentEntries.clear();
             var path = ConfigUtil.getIcsPath();
+
+            // Falls die ICS-Datei noch nicht existiert, erstelle eine leere
             if (!Files.exists(path)) {
                 java.nio.file.Path parent = path.getParent();
                 if (parent == null) parent = java.nio.file.Paths.get(".");
                 if (Files.exists(parent) && Files.isWritable(parent)) {
-                    try { IcsUtil.exportIcs(path, new ArrayList<>()); } catch (Exception ex) { log("RELOAD", "Konnte neue ICS nicht erzeugen: " + ex.getMessage()); }
+                    try {
+                        IcsUtil.exportIcs(path, new ArrayList<>());
+                    } catch (Exception ex) {
+                        log("RELOAD", "Konnte neue ICS nicht erzeugen: " + ex.getMessage());
+                    }
                 }
             }
+
+            // Lade die Termine aus der ICS-Datei
             if (Files.exists(path)) {
                 currentEntries.addAll(IcsUtil.importIcs(path));
             }
+
             log("RELOAD", "ICS-Einträge geladen: " + currentEntries.size());
+
+            // Zeige die geladenen Termine im Kalender an
             populateCalendar(currentEntries);
+
+            // Plane Erinnerungen für die Termine
             scheduleReminders(currentEntries);
+
         } catch (Exception ex) {
             log("ERROR", "Fehler beim Laden aus ICS: " + ex.getMessage());
             showError("Fehler beim Laden aus ICS", ex);
         }
-        suppressAutoSave = false; // nach dem vollständigen Laden wieder erlauben
+
+        suppressAutoSave = false; // Nach dem Laden wieder automatisch speichern erlauben
     }
 
+    /**
+     * Füllt die Kalenderansicht mit den geladenen Terminen.
+     *
+     * @param items Die Liste der anzuzeigenden Termine
+     */
     @SuppressWarnings("unchecked")
     private void populateCalendar(List<CalendarEntry> items) {
         log("POPULATE", "Übernehme Einträge in CalendarFX: count=" + items.size());
+
+        // Lösche alle bestehenden Einträge
         fxCalendar.clear();
         for (Calendar<String> cal : categoryCalendars.values()) cal.clear();
+
+        // Gehe durch jeden Termin und füge ihn zum passenden Kalender hinzu
         for (CalendarEntry ce : items) {
-            @SuppressWarnings("unchecked") // CalendarFX addEntry uses raw Entry in some versions
+            // Erstelle ein CalendarFX-Entry-Objekt
+            @SuppressWarnings("unchecked")
             Entry<String> entry = new Entry<>(ce.getTitle());
+
+            // Setze die Beschreibung (in CalendarFX heißt das "Location")
             if (ce.getDescription() != null && !ce.getDescription().isBlank()) {
                 entry.setLocation(ce.getDescription());
             }
+
+            // Setze Start- und Endzeit
             entry.setInterval(ce.getStart().atZone(zone), ce.getEnd().atZone(zone));
+
+            // Finde den richtigen Kalender basierend auf der Kategorie
             String cat = (ce.getCategory() == null || ce.getCategory().isBlank()) ? "Allgemein" : ce.getCategory();
             Calendar<String> target = getOrCreateCalendar(cat);
             target.addEntry(entry);
         }
+
         setStatus("Status: Kalender geladen (" + items.size() + ")");
     }
 
     /**
-     * Rebuilds the currentEntries list from the CalendarFX UI state.
-     * This ensures that any changes made directly in the CalendarFX UI
-     * (dragging, resizing, deleting, or editing entries) are captured
-     * before exporting to ICS.
+     * Erstellt eine aktuelle Liste aller Termine aus dem UI.
+     * Dies ist wichtig, weil der Benutzer Termine direkt im CalendarFX-View
+     * verschieben, ändern oder löschen kann.
      */
     private void rebuildCurrentEntriesFromUI() {
         currentEntries.clear();
         int calendarCount = 0;
         int entryCount = 0;
+
+        // Gehe durch alle Kalender-Quellen
         for (CalendarSource source : calendarView.getCalendarSources()) {
+            // Gehe durch alle Kalender in dieser Quelle
             for (Calendar<?> calendar : source.getCalendars()) {
                 calendarCount++;
+
+                // Finde alle Einträge in diesem Kalender (leerer String = alle)
                 List<Entry<?>> entries = calendar.findEntries("");
+
+                // Wandle jeden CalendarFX-Entry in ein CalendarEntry um
                 for (Entry<?> entry : entries) {
                     String title = entry.getTitle() != null ? entry.getTitle() : "(Ohne Titel)";
                     String description = entry.getLocation() != null ? entry.getLocation() : "";
                     LocalDateTime start = entry.getStartAsLocalDateTime();
                     LocalDateTime end = entry.getEndAsLocalDateTime();
+
                     CalendarEntry ce = new CalendarEntry(title, description, start, end);
+
+                    // Speichere die Kategorie (Kalendername)
                     String calendarName = calendar.getName();
                     if (calendarName != null && !calendarName.isEmpty() && !"Allgemein".equalsIgnoreCase(calendarName)) {
                         ce.setCategory(calendarName);
                     }
+
                     currentEntries.add(ce);
                     entryCount++;
                 }
             }
         }
+
         log("REBUILD", "Kalender geprüft=" + calendarCount + ", Einträge gesammelt=" + entryCount);
     }
 
+    /**
+     * Holt einen Kalender für eine bestimmte Kategorie oder erstellt ihn, falls er noch nicht existiert.
+     *
+     * @param category Der Name der Kategorie (z.B. "Arbeit", "Privat")
+     * @return Der Kalender für diese Kategorie
+     */
     private Calendar<String> getOrCreateCalendar(String category) {
+        // "Allgemein" ist der Standard-Kalender
         if ("Allgemein".equalsIgnoreCase(category)) return fxCalendar;
+
+        // Suche oder erstelle einen Kalender für diese Kategorie
         return categoryCalendars.computeIfAbsent(category, c -> {
             Calendar<String> cal = new Calendar<>(c);
+
+            // Wähle eine Farbe für den Kalender (basierend auf dem Namen)
             Calendar.Style[] styles = Calendar.Style.values();
             Calendar.Style style = styles[Math.abs(c.hashCode()) % styles.length];
             cal.setStyle(style);
+
+            // Füge den neuen Kalender zur Ansicht hinzu
             for (CalendarSource src : calendarView.getCalendarSources()) {
                 if (!src.getCalendars().contains(cal)) {
                     src.getCalendars().add(cal);
-                    addCalendarListener(cal); // ensure listener on new category calendar
+                    addCalendarListener(cal); // Überwache Änderungen in diesem Kalender
                     log("CAL", "Neuer Kategorie-Kalender erstellt: " + c);
                     break;
                 }
@@ -247,8 +402,8 @@ public class CalendarProjektController implements Initializable {
     }
 
     /**
-     * Sets up listeners to detect when entries are added, modified, or deleted
-     * via the CalendarFX UI. Änderungen werden automatisch in die ICS-Datei gespeichert.
+     * Richtet Listener ein, die automatisch speichern, wenn sich Termine ändern.
+     * Das umfasst: Hinzufügen, Bearbeiten, Löschen und Verschieben von Terminen.
      */
     private void setupCalendarListeners() {
         addCalendarListener(fxCalendar);
@@ -258,12 +413,12 @@ public class CalendarProjektController implements Initializable {
     }
 
     /**
-     * Adds listeners to detect entry changes and auto-save:
-     * - once globally on CalendarView (guarded by calendarEventsHooked)
-     * - always on the given Calendar model to catch add/edit/delete reliably
+     * Fügt Listener zu einem Kalender hinzu, die bei Änderungen reagieren.
+     *
+     * @param calendar Der zu überwachende Kalender
      */
     private void addCalendarListener(Calendar<?> calendar) {
-        // Register once on the view to catch propagated events
+        // Registriere einmal global an der CalendarView
         if (calendarView != null && !calendarEventsHooked) {
             calendarView.addEventHandler(com.calendarfx.model.CalendarEvent.ANY, event -> {
                 if (suppressAutoSave) {
@@ -276,26 +431,29 @@ public class CalendarProjektController implements Initializable {
             calendarEventsHooked = true;
             log("CAL", "Globaler CalendarFX-Listener registriert");
         }
-        // Hinweis: Kein Handler mehr direkt am Calendar-Model registrieren, da Calendar in dieser
-        // Umgebung kein vollständig unterstütztes EventTarget ist und addEventHandler dort eine
-        // UnsupportedOperationException auslösen kann. Die View-Handler decken die Änderungen ab.
     }
 
     /**
-     * Saves the current UI entries to the ICS file.
-     * This is called automatically when entries are added, modified, or deleted via CalendarFX.
+     * Speichert alle aktuellen Termine in die ICS-Datei.
+     * Dies wird automatisch aufgerufen, wenn sich etwas ändert.
      */
     private void saveCurrentEntriesToIcs() {
         if (suppressAutoSave) {
             log("SAVE_ICS_SUPPRESS", "Speichern unterdrückt (Initialisierung)");
             return;
         }
+
         try {
+            // Sammle alle Termine aus dem UI
             rebuildCurrentEntriesFromUI();
+
+            // Sicherheitscheck: Verhindere versehentliches Löschen aller Daten
             if (!initialLoadCompleted && currentEntries.isEmpty() && lastSavedCount > 0) {
                 log("SAVE_ICS_SKIP", "Leere Liste erkannt vor initialLoadCompleted – Speichern übersprungen");
                 return;
             }
+
+            // Erstelle ein Backup, falls wir von vielen Terminen auf 0 gehen würden
             if (lastSavedCount > 0 && currentEntries.isEmpty()) {
                 try {
                     java.nio.file.Path path = ConfigUtil.getIcsPath();
@@ -308,11 +466,16 @@ public class CalendarProjektController implements Initializable {
                     log("ERROR", "Backup fehlgeschlagen: " + exb.getMessage());
                 }
             }
+
+            // Schreibe die Termine in die ICS-Datei
             log("SAVE_ICS", "Schreibe Einträge: count=" + currentEntries.size() + " -> " + ConfigUtil.getIcsPath());
             IcsUtil.exportIcs(ConfigUtil.getIcsPath(), currentEntries);
             lastSavedCount = currentEntries.size();
+
+            // Aktualisiere die Statusanzeige
             setStatus("Status: Gespeichert (" + lastSavedCount + ")");
             setSaveStatus("Speichern erfolgreich");
+
         } catch (Exception ex) {
             setStatus("Status: Fehler beim Speichern");
             setSaveStatus("Fehler beim Speichern");
@@ -545,13 +708,13 @@ public class CalendarProjektController implements Initializable {
         if (calendarContainer.getScene() == null) return;
         var stylesheets = calendarContainer.getScene().getStylesheets();
         URL res = getClass().getResource("/dark.css");
-        if (res != null) {
-            String darkCss = res.toExternalForm();
-            stylesheets.remove(darkCss);
+        String darkCss = res != null ? res.toExternalForm() : null;
+        stylesheets.removeIf(s -> s.endsWith("dark.css"));
+        if (ConfigUtil.isDarkMode() && darkCss != null) {
             stylesheets.add(darkCss);
-            log("THEME", "Scene Stylesheets angewendet: " + stylesheets.size());
+            log("THEME", "Dark mode stylesheet applied");
         } else {
-            log("THEME", "dark.css nicht gefunden");
+            log("THEME", "Dark mode stylesheet removed");
         }
     }
 
@@ -559,11 +722,11 @@ public class CalendarProjektController implements Initializable {
         if (pane == null) return;
         try {
             URL res = getClass().getResource("/dark.css");
-            if (res != null) {
-                String darkCss = res.toExternalForm();
-                pane.getStylesheets().remove(darkCss);
+            String darkCss = res != null ? res.toExternalForm() : null;
+            pane.getStylesheets().removeIf(s -> s.endsWith("dark.css"));
+            if (ConfigUtil.isDarkMode() && darkCss != null) {
                 pane.getStylesheets().add(darkCss);
-                log("THEME", "Dialog Stylesheets angewendet");
+                log("THEME", "Dialog dark mode stylesheet applied");
             }
         } catch (Exception ignored) {}
     }
@@ -693,7 +856,7 @@ public class CalendarProjektController implements Initializable {
         info.append("  UI-Framework\n\n");
         info.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
         info.append("👤 Autor: fknittel\n\n");
-        info.append("📅 Version: 1.0\n\n");
+        info.append("📅 Version: 1.0.1\n\n");
         info.append("Weitere Informationen finden Sie in:\n");
         info.append("• README.md\n");
         info.append("• THIRD-PARTY-NOTICES.md\n");

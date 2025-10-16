@@ -6,14 +6,16 @@ The UI is localized in German and provides buttons for creating events, importin
 
 For a beginner-friendly walkthrough of the codebase, see CODE_EXPLANATION.md.
 For an end-to-end creation story and build steps in German, see PROJEKT_ERSTELLUNG.md.
+For details about the migration from ical4j to Biweekly, see BIWEEKLY_MIGRATION.md.
+For the auto-save bugfix summary, see FIX_SUMMARY.md.
 
 
 ## Tech Stack
 - Language: Java 21
 - Build tool: Apache Maven
 - UI: JavaFX 22 (controls, FXML)
-- Calendar UI: CalendarFX 12
-- Calendar parsing: ical4j 3.x (ICS) + minimal VCS support
+- Calendar UI: CalendarFX 12 (Open Source, Apache-2.0)
+- Calendar parsing: Biweekly 0.6.8 (ICS) + minimal custom VCS; ical4j 4.0.2 retained as a dependency during transition
 - Testing: JUnit Jupiter (JUnit 5)
 - Packaging: Maven Shade Plugin (fat JAR with `Main-Class: org.example.Main`)
 
@@ -94,6 +96,11 @@ Current tests cover ICS and VCS import/export functionality (`IcsUtilTest`).
 calendar-java/
 ├─ pom.xml                         # Maven build config (Java 21, JavaFX, CalendarFX, Shade, Surefire)
 ├─ README.md
+├─ BIWEEKLY_MIGRATION.md          # Notes for migration from ical4j to Biweekly
+├─ FIX_SUMMARY.md                 # Auto-save bugfix summary
+├─ PROJEKT_ERSTELLUNG.md          # Project creation story (German)
+├─ THIRD-PARTY-NOTICES.md         # Dependencies and licenses
+├─ LICENSE
 ├─ calendar.ics                    # Example ICS file
 ├─ src/
 │  ├─ main/
@@ -136,9 +143,14 @@ There is no dedicated Maven JavaFX run plugin configured. Consider adding `javaf
 ## License
 This project is licensed under the MIT License. See the LICENSE file for details.
 
+Note on CalendarFX: CalendarFX is open source and licensed under the Apache License 2.0 (not a commercial‑only license). Upstream license file:
+https://github.com/dlsc-software-consulting-gmbh/CalendarFX?tab=Apache-2.0-1-ov-file#readme
+
 For the licenses of third‑party dependencies used by this project, see THIRD-PARTY-NOTICES.md.
 
 ## Acknowledgements
-- CalendarFX (https://dlsc.com/products/calendarfx/)
+- CalendarFX — Open Source (Apache-2.0): https://github.com/dlsc-software-consulting-gmbh/CalendarFX
+  - Upstream license file: https://github.com/dlsc-software-consulting-gmbh/CalendarFX?tab=Apache-2.0-1-ov-file#readme
 - OpenJFX (https://openjfx.io/)
-- ical4j (https://github.com/ical4j/ical4j)
+- Biweekly (https://github.com/mangstadt/biweekly)
+- ical4j (https://github.com/ical4j/ical4j) — retained as a dependency during migration

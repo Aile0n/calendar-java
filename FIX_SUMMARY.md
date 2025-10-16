@@ -1,116 +1,59 @@
-# Fix for Calendar Entry Export Bug
+# Fix Summary: UI-Created Entries Not Persisted Automatically
 
-## Problem Statement
-When users created calendar entries directly in the CalendarFX UI (by clicking on the calendar in day, week, month, or year views), these entries were:
-- NOT saved to the ICS file automatically
-- NOT available when exporting the calendar
-- Lost when the application was closed (unless the exit button was used, which calls `rebuildCurrentEntriesFromUI()`)
+## Problem
+Entries created directly in the CalendarFX UI (by clicking in day/week/month/year views) were not saved to the ICS file automatically. They disappeared on export or after restarting the app unless the explicit exit/save path was used.
 
 ## Root Cause
-The application had a method `rebuildCurrentEntriesFromUI()` that could collect all entries from the CalendarFX UI, but it was only called:
-1. When exporting via the "Export" button (`onExport()`)
-2. When closing via the "Exit" button (`onExit()`)
-
-Entries created via the "Neuer Termin" button were directly added to the `currentEntries` list and saved immediately, but entries created by clicking on the calendar views were only added to the CalendarFX visual calendar, not to the persistent `currentEntries` list.
+The persistent list (`currentEntries`) was not rebuilt from the CalendarFX UI after UI-driven edits (drag, resize, delete, create). Only explicit export/exit paths collected the UI state.
 
 ## Solution
-Added automatic listeners to all calendars that monitor entry changes and trigger an automatic save operation.
+Introduce automatic persistence for UI changes:
+- Add a global CalendarView event handler that triggers a save after any CalendarFX change.
+- Add a lightweight diff-based autosave monitor that periodically snapshots the UI state and persists when changes are detected.
+- Centralize the save path to always rebuild `currentEntries` from the current UI before writing ICS.
 
-### Changes Made
+## Implementation Details
+- Rebuild helper: `rebuildCurrentEntriesFromUI()` converts CalendarFX entries (across all calendars/categories) into `CalendarEntry` objects.
+- Auto-save pipeline:
+  1) Global CalendarFX event handler at `calendarView.addEventHandler(CalendarEvent.ANY, ...)`
+  2) Diff-based monitor via a short-interval JavaFX Timeline (`startAutosaveMonitor()`)
+  3) `saveCurrentEntriesToIcs()` calls `rebuildCurrentEntriesFromUI()` and then `IcsUtil.exportIcs(...)`
+- ICS Read/Write uses Biweekly (see BIWEEKLY_MIGRATION.md). VCS support remains via a small custom parser/writer.
 
-#### 1. Added Calendar Entry Change Listeners
-- **File**: `src/main/java/CalendarProjektController.java`
-- **Method**: `setupCalendarListeners()` - Sets up listeners on all calendars during initialization
-- **Method**: `addCalendarListener(Calendar)` - Attaches a ListChangeListener to a calendar's entries property
-- **Method**: `saveCurrentEntriesToIcs()` - Automatically saves entries to ICS when changes are detected
+## Behavior
+Before:
+- UI-created entries: not saved automatically
+- Export: might miss UI-only changes
 
-The listener monitors the `entriesProperty()` of each calendar and triggers a save operation whenever entries are added, modified, or deleted.
-
-#### 2. Enhanced Entry Rebuilding
-- **Method**: `rebuildCurrentEntriesFromUI()` - Enhanced to capture:
-  - Entry title and description (already present)
-  - Entry start and end times (already present)
-  - **Category** from the calendar name (new)
-  - **Recurrence rule** from the entry's recurrence rule property (new)
-
-#### 3. Integration Points
-- `initialize()` - Calls `setupCalendarListeners()` after wiring button actions
-- `getOrCreateCalendar()` - Adds listener to newly created category calendars
-
-### Technical Details
-
-The fix uses JavaFX's `ListChangeListener` to monitor the observable list of entries in each calendar:
-
-```java
-calendar.entriesProperty().addListener((javafx.collections.ListChangeListener<Entry<?>>) change -> {
-    if (ConfigUtil.getStorageMode() == ConfigUtil.StorageMode.ICS) {
-        saveCurrentEntriesToIcs();
-    }
-});
-```
-
-When any change is detected (add, remove, update):
-1. `rebuildCurrentEntriesFromUI()` collects all entries from all calendars
-2. `IcsUtil.exportIcs()` writes the entries to the configured ICS file
-3. Errors are logged but not shown to the user to avoid interrupting workflow
-
-### Behavior
-
-**Before the fix:**
-- Entries created by clicking on calendar views: ❌ Not saved automatically
-- Entries created via "Neuer Termin" button: ✅ Saved immediately
-- Export includes UI-created entries: ❌ No (unless using the exit button)
-
-**After the fix:**
-- Entries created by clicking on calendar views: ✅ Saved automatically
-- Entries created via "Neuer Termin" button: ✅ Saved immediately (unchanged)
-- Export includes UI-created entries: ✅ Yes (always)
-- Entries modified by drag/drop: ✅ Saved automatically
-- Entries deleted via UI: ✅ Removed from ICS file automatically
-
-### Storage Mode Handling
-The auto-save functionality only activates when `ConfigUtil.getStorageMode()` returns `StorageMode.ICS`. In Database mode, the listeners are attached but do not trigger ICS saves.
-
-## Testing
-See `MANUAL_TEST_PLAN.md` for comprehensive manual test scenarios covering:
-- Creating entries in different views (day, week, month, year)
-- Modifying entries via drag and drop
-- Deleting entries
-- Verifying auto-save behavior
-- Confirming database mode is unaffected
-
-## Benefits
-1. **User Experience**: Users can now create entries naturally by clicking on the calendar without worrying about data loss
-2. **Data Integrity**: All entries are immediately persisted to the ICS file
-3. **Consistency**: All entry creation methods (button vs. UI click) now behave the same way
-4. **Minimal Changes**: The fix reuses existing infrastructure (`rebuildCurrentEntriesFromUI()`, `IcsUtil.exportIcs()`) with minimal new code
-
-## Limitations
-- Auto-save does not capture all possible entry properties (e.g., `reminderMinutesBefore` is not stored by CalendarFX Entry objects by default)
-- Auto-save errors are logged but not shown to the user (intentional to avoid interruptions)
-- The fix is specific to ICS mode; database mode uses different persistence mechanisms
+After:
+- UI-created/edited/deleted entries: saved automatically to ICS
+- Export: always includes the current UI state
+- Exit: explicitly rebuilds and saves before closing
 
 ## Files Modified
-1. `src/main/java/CalendarProjektController.java` - Added listeners and auto-save functionality
-2. `MANUAL_TEST_PLAN.md` - Created comprehensive test plan
-3. `FIX_SUMMARY.md` - This file
+- `src/main/java/CalendarProjektController.java`
+  - Added global CalendarView event hook
+  - Implemented diff-based autosave monitor
+  - Hardened save path and exit handling
+  - Completed simple reminder scheduling (`checkReminders`)
+- `src/main/java/IcsUtil.java`
+  - Switched ICS implementation to Biweekly (import/export)
+- `MANUAL_TEST_PLAN.md`
+  - Updated test scenarios (ICS-only, auto-save validation)
 
-## Backward Compatibility
-This fix is fully backward compatible:
-- No breaking changes to existing APIs
-- No changes to database schema
-- No changes to ICS file format
-- Existing entries and functionality remain unchanged
+## Tests & Verification
+See `MANUAL_TEST_PLAN.md` for manual scenarios covering:
+- Create/modify/delete via UI across views
+- Import/export round-trips (ICS and VCS)
+- Status updates and exit/save behavior
 
-## UI Improvements (Version 1.0.0)
+Automated unit tests (`IcsUtilTest`) cover ICS/VCS round-trips and special characters.
 
-### Toolbar Layout Enhancement
-The application toolbar has been reorganized for better user experience:
-- **Left side**: Action buttons (Settings, New Event, Import, Export)
-- **Right side**: Status indicator and Exit/Save button
-- **Spacer**: A flexible region automatically pushes the status label and exit button to the right edge
+## Limitations
+- CalendarFX entries do not expose all metadata (e.g., per-entry reminders) by default; only mapped fields are persisted.
+- Recurrence (RRULE) is not yet supported (planned).
 
-This layout provides:
-- Clear visual separation between actions and status/controls
-- Consistent placement of the save button where users expect it
-- Real-time status feedback always visible before the exit action
+## Related Docs
+- BIWEEKLY_MIGRATION.md — details on the migration from ical4j to Biweekly
+- CODE_EXPLANATION.md — high-level architecture and data flow
+- PROJEKT_ERSTELLUNG.md — project creation history and build steps

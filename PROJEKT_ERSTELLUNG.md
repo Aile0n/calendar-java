@@ -3,12 +3,22 @@
 ## Überblick
 Dieses Dokument beschreibt die schrittweise Erstellung des Calendar-Java-Projekts von Anfang an.
 
+Siehe auch:
+- README.md – Schnellstart und Übersicht
+- CODE_EXPLANATION.md – Code-Erklärung für Einsteiger
+- FIX_SUMMARY.md – Zusammenfassung des Auto-Save Bugfixes
+- BIWEEKLY_MIGRATION.md – Migration von ical4j zu Biweekly
+- MANUAL_TEST_PLAN.md – Manueller Testplan
+- THIRD-PARTY-NOTICES.md – Drittanbieter-Lizenzen
+- LICENSE – Projektlizenz
+- CHANGELOG.md – Versionshistorie
+
 ## Projektinformationen
 - **Name**: Calendar Java
 - **Autor**: Florian Knittel
 - **Sprache**: Java 21
 - **Build-Tool**: Maven
-- **Version**: 1.0.0
+- **Version**: 1.0.1
 
 ## Entwicklungsgeschichte
 
@@ -50,7 +60,7 @@ Einträge, die direkt im CalendarFX UI erstellt wurden (durch Klick auf Kalender
 
 **Lösung**:
 - `rebuildCurrentEntriesFromUI()` Methode implementiert
-- Auto-Save-Listener für CalendarFX Einträge hinzugefügt
+- Auto-Save (globaler CalendarView-Handler + Diff-basierter Monitor)
 - Verbesserte ICS-Pfad-Logik mit Fallback zum Home-Verzeichnis
 - Schreibberechtigungsprüfungen vor ICS-Dateierstellung
 
@@ -59,10 +69,10 @@ Einträge, die direkt im CalendarFX UI erstellt wurden (durch Klick auf Kalender
 - `CalendarProjektController.java`
 - `ConfigUtil.java`
 
-### Version 1.0.0 (2025-10-09) - UI-Verbesserungen
-**Ziel**: Optimierte Benutzeroberfläche und Workflow
+### Version 1.0.0 (2025-10-09) - UI-Verbesserungen und ICS-Library-Migration
+**Ziel**: Optimierte Benutzeroberfläche und Workflow; Migration auf Biweekly vorbereiten
 
-**Änderungen**:
+**Änderungen (UI)**:
 - Toolbar-Layout neu organisiert:
   - Links: Aktions-Buttons (Einstellungen, Neuer Termin, Import, Export)
   - Rechts: Status-Anzeige und "Beenden und Speichern"
@@ -70,9 +80,26 @@ Einträge, die direkt im CalendarFX UI erstellt wurden (durch Klick auf Kalender
 - Bessere visuelle Trennung zwischen Aktionen und Kontrollelementen
 - Status-Label zeigt immer aktuelle Speicher-Information
 
-**Technische Details**:
+**Technische Details (UI)**:
 - `Region spacer = new Region()` mit `HBox.setHgrow(spacer, Priority.ALWAYS)`
 - Toolbar-Items-Reihenfolge: `settingsButton, createBtn, importBtn, exportBtn, spacer, statusLabel, separator, exitBtn`
+
+**Änderungen (ICS)**:
+- Migration von ical4j (Code) zu Biweekly vorbereitet und umgesetzt (Details siehe `BIWEEKLY_MIGRATION.md`)
+
+### Version 1.0.1 (2025-10-16) - Biweekly & Dokumentation
+**Ziel**: Migration dokumentieren und Dokumentation vereinheitlichen
+
+**Änderungen**:
+- `BIWEEKLY_MIGRATION.md` erstellt/aktualisiert (Biweekly 0.6.8, ical4j 4.0.2 beibehalten)
+- `IcsUtil.java` vollständig auf Biweekly umgestellt (Import/Export)
+- `CODE_EXPLANATION.md` auf Biweekly aktualisiert und verlinkt
+- `README.md` ergänzt (Biweekly, Querverweise)
+- `THIRD-PARTY-NOTICES.md` korrigiert (Biweekly hinzugefügt, ical4j-Version aktualisiert)
+- `MANUAL_TEST_PLAN.md` bereinigt (ICS-only, Reminder-Test ergänzt)
+- `FIX_SUMMARY.md` an tatsächliche Umsetzung angepasst (Auto-Save Pipeline)
+- `PROJEKT_ERSTELLUNG.md` mit Verlinkungen zu allen relevanten Dokumenten
+- `CHANGELOG.md` mit Dokumentationsupdates zu Biweekly ergänzt
 
 ## Build-Anweisungen
 
@@ -100,10 +127,47 @@ Das erzeugte Shaded JAR befindet sich in `target/` und enthält alle Abhängigke
 
 ### Anwendung starten
 ```cmd
-java -jar target\calendar-java-1.0-SNAPSHOT-shaded.jar
+java -jar target\calendar-java-1.0.1-SNAPSHOT-shaded.jar
 ```
 
 Oder in der IDE: `org.example.Main` ausführen
+
+## Git und GitHub
+
+Dieser Abschnitt beschreibt, wie Git eingerichtet und das Projekt auf GitHub veröffentlicht wird. Außerdem wird eine CI-Pipeline über GitHub Actions aktiviert.
+
+### 1) Git initialisieren und erste Commits
+```cmd
+git init
+git add .
+git commit -m "Initial commit"
+```
+
+Empfehlung: `.gitignore` verwenden (Java/Maven/IDE). In diesem Repository ist eine passende `.gitignore` enthalten.
+
+### 2) GitHub-Repository anlegen
+1. Auf https://github.com ein neues Repository erstellen (Name: `calendar-java`).
+2. Remote hinzufügen und auf den Hauptbranch `main` pushen:
+```cmd
+git branch -M main
+git remote add origin https://github.com/<dein-user>/calendar-java.git
+git push -u origin main
+```
+Hinweis: Bei HTTPS fragt Git nach Zugangsdaten/Token. Einrichten eines Personal Access Tokens (PAT) kann nötig sein.
+
+### 3) Continuous Integration (GitHub Actions)
+Dieses Projekt enthält eine Workflow-Datei unter `.github/workflows/ci.yml`. Sie baut und testet das Projekt bei jedem Push/PR.
+
+- JDK: Temurin 21
+- Betriebssysteme: Ubuntu, Windows
+- Befehl: `mvn -B -ntp verify`
+
+Ergebnisse sind im GitHub UI unter "Actions" einsehbar.
+
+### 4) Optionale Schritte
+- Branch-Schutzregeln aktivieren (Require passing checks)
+- Release-Tagging und GitHub Releases
+- Issue-Templates/PR-Templates hinzufügen
 
 ## Projektstruktur
 
@@ -114,11 +178,13 @@ calendar-java/
 ├── CHANGELOG.md                            # Versionshistorie
 ├── CODE_EXPLANATION.md                     # Code-Erklärung für Anfänger
 ├── FIX_SUMMARY.md                          # Bugfix-Dokumentation
+├── BIWEEKLY_MIGRATION.md                   # Migration ical4j → Biweekly
 ├── PROJEKT_ERSTELLUNG.md                   # Diese Datei
 ├── THIRD-PARTY-NOTICES.md                  # Lizenzen von Dependencies
 ├── build-jar.cmd                           # Windows Build-Skript
 ├── calendar.ics                            # Beispiel-ICS-Datei
 ├── config.properties                       # Externe Konfiguration
+├── .github/workflows/ci.yml                # GitHub Actions CI (Maven Build + Tests)
 └── src/
     ├── main/
     │   ├── java/
@@ -128,7 +194,6 @@ calendar-java/
     │   │   ├── CalendarProjektController.java  # FXML Controller
     │   │   ├── CalendarEntry.java          # Domain-Model
     │   │   ├── ConfigUtil.java             # Konfigurations-Utility
-    │   │   ├── IcsUtil.java                # ICS/VCS Import/Export
     │   │   └── net/fortuna/ical4j/transform/recurrence/Frequency.java  # Shim
     │   └── resources/
     │       ├── calendar_view.fxml          # FXML-Layout
@@ -149,11 +214,12 @@ calendar-java/
 
 ### UI
 - **JavaFX 22**: Desktop-UI-Framework
-- **CalendarFX 12**: Professionelle Kalender-Komponente
+- **CalendarFX 12**: Professionelle Kalender-Komponente (Apache-2.0)
 - **FXML**: Deklarative UI-Definition
 
 ### Daten
-- **ical4j 3.2.7**: RFC 5545 (iCalendar) Implementierung
+- **Biweekly 0.6.8**: ICS Import/Export in der App (RFC 5545)
+- **ical4j 4.0.2**: Als Dependency beibehalten (Kompatibilität)
 - **Custom VCS Parser**: Minimale vCalendar 1.0 Unterstützung
 
 ### Testing
@@ -181,23 +247,23 @@ Die Datei wird in folgender Reihenfolge gesucht:
 ## Features
 
 ### Implementiert
-- ✅ ICS-Import/Export (ical4j)
+- ✅ ICS-Import/Export (Biweekly)
 - ✅ VCS-Import/Export (custom)
 - ✅ CalendarFX UI Integration
 - ✅ Deutsche Lokalisierung
 - ✅ Dark Mode
-- ✅ Automatisches Speichern
+- ✅ Automatisches Speichern (Auto-Save Pipeline)
 - ✅ Status-Anzeige
 - ✅ Einstellungs-Dialog
 - ✅ Termin-Erstellung per Dialog
 - ✅ Termin-Erstellung per UI-Klick
 - ✅ Drag & Drop Termine
+- ✅ Erinnerungen (VALARM – einfache Hinweise)
 - ✅ Info-Dialog mit Bibliotheks-Credits
 
 ### Zukünftige Erweiterungen
 - ⏳ Wiederkehrende Termine (RRULE)
-- ⏳ Erinnerungen (VALARM)
-- ⏳ Kategorien/Tags
+- ⏳ Kategorien/Tags (erweiterte Funktionen)
 - ⏳ Mehrere Kalender-Quellen
 - ⏳ Suche/Filter
 - ⏳ Kalender-Freigabe
@@ -206,7 +272,7 @@ Die Datei wird in folgender Reihenfolge gesucht:
 - Keine Datenbank-Persistenz (nur ICS)
 - Begrenzte RRULE-Unterstützung
 - VCS-Import: nur grundlegende Felder
-- CalendarFX ist kommerziell lizenziert (Lizenz erforderlich)
+- CalendarFX ist Open Source unter Apache-2.0; beim Redistributieren Lizenzhinweise beilegen (siehe THIRD-PARTY-NOTICES.md)
 
 ## Support und Kontakt
 **Autor**: Florian Knittel
@@ -215,4 +281,4 @@ Bei Fragen oder Problemen:
 1. README.md und CODE_EXPLANATION.md lesen
 2. CHANGELOG.md für bekannte Issues prüfen
 3. FIX_SUMMARY.md für Bugfix-Details ansehen
-
+4. BIWEEKLY_MIGRATION.md für Migrationsdetails

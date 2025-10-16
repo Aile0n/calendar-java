@@ -6,6 +6,44 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 
+## [1.0.2] - 2025-10-16
+
+### Documentation
+- README.md
+  - Clarified Tech Stack with exact components and versions and reinforced that ical4j is retained only during transition
+  - Added clearer Troubleshooting for JavaFX native modules and empty ICS files
+  - Expanded Run/Build instructions (Windows-friendly) and highlighted shaded JAR launcher `org.example.Main`
+  - Added explicit Acknowledgements and clarified that CalendarFX is open source under Apache-2.0 with upstream license link
+  - Refined Project Structure overview for quick navigation
+- CODE_EXPLANATION.md
+  - Expanded “Big Picture” and “Data Flow”, including autosave behavior and status indicator
+  - Added “Where to start reading the code” and a concise glossary for newcomers
+- BIWEEKLY_MIGRATION.md
+  - Added before/after code snippets (ical4j → Biweekly) for import/export
+  - Clarified versions (Biweekly 0.6.8, ical4j 4.0.2) and test commands
+- FIX_SUMMARY.md
+  - Detailed the autosave pipeline (global handler + diff monitor) and reminder handling
+  - Linked to related documents (migration, manual test plan, architecture overview)
+- MANUAL_TEST_PLAN.md
+  - Documented end-to-end manual scenarios for auto-save, ICS/VCS round-trips, drag/drop, delete, and reminders
+- PROJEKT_ERSTELLUNG.md
+  - Consolidated links to all docs, updated build/run sections with Windows cmd examples
+  - Added CI (GitHub Actions) overview and set project header to 1.0.1 for historical accuracy
+- THIRD-PARTY-NOTICES.md
+  - Clarified CalendarFX licensing (Apache-2.0), added concise license guidance, and included a version history + Maven command to regenerate notices
+
+### Notes
+- No functional code changes in this release; this is a documentation alignment/polish release to keep all Markdown guides consistent with the current implementation (Biweekly-based ICS, auto-save pipeline, UI layout).
+
+## [1.0.1] - 2025-10-09
+
+### Fixed
+- **Dark Mode Toggle**: Fixed bug where dark mode could not be turned off
+  - Updated `applyTheme()` and `applyThemeToDialog()` methods in `CalendarProjektController.java` to conditionally apply dark.css stylesheet only when dark mode is enabled
+  - Updated `applyTheme()` and `applyThemeToDialog()` methods in `CalendarProjektApp.java` to conditionally apply dark.css stylesheet only when dark mode is enabled
+  - Dark mode stylesheet is now properly removed when dark mode is disabled in settings
+  - Previously, the stylesheet was always applied regardless of the dark mode setting
+
 ## [1.0.0] - 2025-10-09
 
 ### Changed

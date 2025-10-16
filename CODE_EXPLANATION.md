@@ -5,7 +5,7 @@ This document explains the main parts of the Calendar Java project and how data 
 ## Big Picture
 - UI: JavaFX + CalendarFX provide the window, buttons, and calendar view.
 - Data: Events (CalendarEntry) are stored in an ICS file (ICS-only design).
-- Import/Export: ICS (via ical4j) and basic VCS are supported.
+- Import/Export: ICS via Biweekly, plus basic VCS support. ical4j remains as a dependency for compatibility but ICS read/write in this app is implemented with Biweekly.
 - Config: A `config.properties` file controls the ICS file path and UI options.
 
 The app starts via a small launcher (org.example.Main) that ensures JavaFX can be started reliably from the shaded JAR.
@@ -36,7 +36,7 @@ The app starts via a small launcher (org.example.Main) that ensures JavaFX can b
   - Represents a calendar event: id (optional), title, description, start/end times, optional reminder minutes, and category.
 
 - IcsUtil (import/export helper)
-  - ICS: Uses ical4j to parse and generate `.ics` files.
+  - ICS: Uses Biweekly to parse and generate `.ics` files.
   - VCS: Contains a minimal reader/writer for vCalendar 1.0 (`.vcs`).
   - Maps categories and reminders (VALARM) to/from `CalendarEntry` when possible.
 
@@ -80,3 +80,6 @@ The app starts via a small launcher (org.example.Main) that ensures JavaFX can b
 - CalendarFX: A UI library for calendar views and interactions.
 - ICS (iCalendar): A standard calendar file format used by many tools.
 - VCS (vCalendar): An older calendar file format similar to ICS.
+
+---
+See also: BIWEEKLY_MIGRATION.md for details about the migration from ical4j to Biweekly.

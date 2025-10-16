@@ -1,42 +1,33 @@
-# Maven build output
+# Java / Maven
 /target/
-/out/
-/build/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/
 
-# IntelliJ IDEA project files
-/.idea/
+# IntelliJ IDEA
+.idea/
 *.iml
 *.iws
-*.ipr
+out/
 
-# VS Code workspace
-/.vscode/
-
-# Eclipse leftovers (in case someone imports it there)
-.classpath
+# Eclipse
 .project
+.classpath
 .settings/
 
-# OS-specific junk
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# OS Files
 .DS_Store
 Thumbs.db
-desktop.ini
 
-# Logs and temp files
-*.log
-logs/
-*.tmp
-tmp/
-*.bak
+# Build scripts cache
+*.bat~
+*.cmd~
 
-# Local databases and generated data
-calendar.db
-*.db
-*.sqlite
+# Local config override (if any)
+config.local.properties
 
-# Exported/imported calendar files (generated during use)
-*.ics
-
-# Java crash logs
-hs_err_pid*
-replay_pid*

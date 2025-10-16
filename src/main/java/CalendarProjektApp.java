@@ -30,6 +30,7 @@ import javafx.stage.Modality;
 import javafx.stage.FileChooser;
 
 import java.io.File;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
@@ -544,6 +545,7 @@ public class CalendarProjektApp extends Application {
     private void showInfoDialog(Stage owner) {
         StringBuilder sb = new StringBuilder();
         sb.append("CalendarProjekt\n\n");
+        sb.append("Version: 1.0.1\n\n");
         sb.append("Verwendete Bibliotheken:\n");
         sb.append("- CalendarFX 12.0.1\n");
         sb.append("- JavaFX 22.0.1\n");
@@ -737,17 +739,23 @@ public class CalendarProjektApp extends Application {
     private void applyThemeToDialog(javafx.scene.control.DialogPane pane) {
         if (pane == null) return;
         try {
-            String darkCss = getClass().getResource("/dark.css").toExternalForm();
-            var sheets = pane.getStylesheets(); sheets.remove(darkCss);
-            if (ConfigUtil.isDarkMode()) sheets.add(darkCss);
+            URL res = getClass().getResource("/dark.css");
+            String darkCss = res != null ? res.toExternalForm() : null;
+            pane.getStylesheets().removeIf(s -> s.endsWith("dark.css"));
+            if (ConfigUtil.isDarkMode() && darkCss != null) {
+                pane.getStylesheets().add(darkCss);
+            }
         } catch (Exception ignored) {}
     }
     private void applyTheme(Scene scene) {
         if (scene == null) return;
         try {
-            String darkCss = getClass().getResource("/dark.css").toExternalForm();
-            var stylesheets = scene.getStylesheets(); stylesheets.remove(darkCss);
-            if (ConfigUtil.isDarkMode()) stylesheets.add(darkCss);
+            URL res = getClass().getResource("/dark.css");
+            String darkCss = res != null ? res.toExternalForm() : null;
+            scene.getStylesheets().removeIf(s -> s.endsWith("dark.css"));
+            if (ConfigUtil.isDarkMode() && darkCss != null) {
+                scene.getStylesheets().add(darkCss);
+            }
         } catch (Exception ignored) {}
     }
 
