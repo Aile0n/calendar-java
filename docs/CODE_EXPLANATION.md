@@ -1,4 +1,5 @@
 # Code Explanation (Beginner Friendly)
+Version: 1.0.3 — Stand: 2025-11-13
 
 This document explains the main parts of the Calendar Java project and how data flows through the app. It's written for starters who want a quick mental model without diving into every implementation detail.
 

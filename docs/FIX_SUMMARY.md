@@ -1,4 +1,5 @@
 # Fix Summary: UI-Created Entries Not Persisted Automatically
+Version: 1.0.3 — Stand: 2025-11-13
 
 ## Problem
 Entries created directly in the CalendarFX UI (by clicking in day/week/month/year views) were not saved to the ICS file automatically. They disappeared on export or after restarting the app unless the explicit exit/save path was used.

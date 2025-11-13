@@ -1,4 +1,5 @@
 # Manual Test Plan for Auto-Save and ICS/VCS
+Version: 1.0.3 — Stand: 2025-11-13
 
 ## Summary
 This plan verifies that entries created or edited directly in the CalendarFX UI are saved automatically to the configured ICS file and that import/export (ICS and VCS) works end-to-end.

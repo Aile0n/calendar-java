@@ -199,7 +199,7 @@ public class CalendarProjektController implements Initializable {
      */
     private void setSaveStatus(String text) {
         if (saveStatusLabel != null) {
-            saveStatusLabel.setText("💾 " + text);
+            saveStatusLabel.setText(text);
             // Farbe anpassen: Grün bei Erfolg, Rot bei Fehler
             if (text.contains("erfolgreich") || text.equals("Gespeichert")) {
                 saveStatusLabel.setStyle("-fx-text-fill: #4CAF50;");
@@ -733,8 +733,8 @@ public class CalendarProjektController implements Initializable {
 
     private javafx.animation.Timeline reminderTimeline;
     private final java.util.Set<String> notified = new java.util.HashSet<>();
-    private javafx.animation.Timeline autosaveTimeline; // periodic autosave monitor
-    private String lastUiSignature; // snapshot of UI to detect changes
+    private javafx.animation.Timeline autosaveTimeline; // periodischer Auto-Speicher-Monitor
+    private String lastUiSignature; // UI-Snapshot zur Erkennung von Änderungen
 
     private void scheduleReminders(List<CalendarEntry> items) {
         if (reminderTimeline != null) reminderTimeline.stop();
@@ -771,7 +771,7 @@ public class CalendarProjektController implements Initializable {
         }
     }
 
-    // Computes a stable signature of the UI state to detect changes without heavy diffing
+    // Erzeugt eine stabile Signatur des UI-Zustands, um Änderungen ohne aufwändiges Diffen zu erkennen
     private String computeUiSignature() {
         StringBuilder sb = new StringBuilder();
         java.util.List<String> parts = new java.util.ArrayList<>();
@@ -836,36 +836,27 @@ public class CalendarProjektController implements Initializable {
         log("INFO", "Öffne Info-Dialog");
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Über Calendar Java");
-        alert.setHeaderText("Calendar Java - Kalenderanwendung");
+        alert.setHeaderText("Calendar Java – Kalenderanwendung");
 
         StringBuilder info = new StringBuilder();
-        info.append("Eine JavaFX-basierte Kalenderanwendung\n\n");
-        info.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
-        info.append("📚 Verwendete Bibliotheken:\n\n");
-        info.append("• CalendarFX\n");
-        info.append("  https://github.com/dlsc-software-consulting-gmbh/CalendarFX\n");
-        info.append("  Apache License 2.0\n");
-        info.append("  Moderne Kalenderansicht für JavaFX\n\n");
-        info.append("• Biweekly\n");
-        info.append("  https://github.com/mangstadt/biweekly\n");
-        info.append("  BSD 2-Clause License\n");
-        info.append("  iCalendar (ICS) Parser und Generator\n\n");
-        info.append("• JavaFX\n");
-        info.append("  https://openjfx.io/\n");
-        info.append("  GPL v2 + Classpath Exception\n");
-        info.append("  UI-Framework\n\n");
-        info.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
-        info.append("👤 Autor: fknittel\n\n");
-        info.append("📅 Version: 1.0.1\n\n");
-        info.append("Weitere Informationen finden Sie in:\n");
-        info.append("• README.md\n");
-        info.append("• THIRD-PARTY-NOTICES.md\n");
-        info.append("• LICENSE\n");
+        info.append("JavaFX-basierte Kalenderanwendung\n\n");
+        info.append("Verwendete Bibliotheken:\n");
+        info.append("- CalendarFX (Apache-2.0)\n");
+        info.append("- Biweekly (BSD-2-Clause)\n");
+        info.append("- JavaFX (GPLv2 + Classpath Exception)\n\n");
+        info.append("Autoren:\n");
+        info.append("- Jan Erdmann\n");
+        info.append("- Kerim Talha Morca\n");
+        info.append("- Florian Alexander Knittel\n\n");
+        info.append("Version: ").append(VersionUtil.getVersion()).append("\n\n");
+        info.append("Weitere Informationen:\n");
+        info.append("- README.md\n");
+        info.append("- THIRD-PARTY-NOTICES.md\n");
+        info.append("- LICENSE\n");
 
         alert.setContentText(info.toString());
         applyThemeToDialog(alert.getDialogPane());
 
-        // Make dialog resizable and set min width
         alert.getDialogPane().setMinWidth(600);
         alert.setResizable(true);
 

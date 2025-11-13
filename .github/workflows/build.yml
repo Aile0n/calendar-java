@@ -1,0 +1,65 @@
+name: Build fat JAR
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*', '*.*.*' ]
+  pull_request:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build (skip tests) and upload artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Build with Maven (skip tests)
+        run: mvn -B -DskipTests package
+
+      - name: List target files (debug)
+        run: ls -la target || dir target || true
+
+      - name: Upload shaded JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-java-jar
+          path: |
+            target/*.jar
+          if-no-files-found: error
+
+  release:
+    name: Attach JAR to GitHub Release
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Build with Maven (skip tests)
+        run: mvn -B -DskipTests package
+
+      - name: Upload JAR to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            target/*.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
