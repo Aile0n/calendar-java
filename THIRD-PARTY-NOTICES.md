@@ -1,8 +1,9 @@
 # Third-Party Notices and Licenses
+Version: 1.0.3 — Stand: 2025-11-13
 
 This project depends on third‑party libraries. Their licenses are summarized below to help you understand your obligations when using, distributing, or modifying this software.
 
-This list is based on pom.xml as of version 1.0.1 (2025-10-16). Always verify on Maven Central and vendor sites for the most current terms.
+This list is based on pom.xml as of version 1.0.3 (2025-11-13). Always verify on Maven Central and vendor sites for the most current terms.
 
 ## Runtime dependencies
 
@@ -50,6 +51,7 @@ This list is based on pom.xml as of version 1.0.1 (2025-10-16). Always verify on
 - Apache 2.0 and BSD‑family licenses: These are permissive; include appropriate notices if you redistribute.
 
 ## Version History
+- **1.0.3** (2025-11-13): Documentation/comment quality improvements and UI text polish; dependency versions unchanged from 1.0.2
 - **1.0.1** (2025-10-16): Corrected CalendarFX license (now Apache-2.0); added Biweekly; updated ical4j to 4.0.2; removed sqlite-jdbc; documentation alignment with migration
 - **1.0.0** (2025-10-09): UI improvements, toolbar reorganization
 - **0.2.0** (2025-10-08): Persistence bugfixes, auto-save functionality

@@ -1,4 +1,5 @@
 # Projekterstellung – Calendar Java
+Version: 1.0.3 — Stand: 2025-11-13
 
 ## Überblick
 Dieses Dokument beschreibt die schrittweise Erstellung des Calendar-Java-Projekts von Anfang an.
@@ -15,10 +16,13 @@ Siehe auch:
 
 ## Projektinformationen
 - **Name**: Calendar Java
-- **Autor**: Florian Knittel
+- **Autoren**:
+  - Jan Erdmann
+  - Kerim Talha Morca
+  - Florian Alexander Knittel
 - **Sprache**: Java 21
 - **Build-Tool**: Maven
-- **Version**: 1.0.1
+- **Version**: 1.0.3
 
 ## Entwicklungsgeschichte
 
@@ -127,7 +131,7 @@ Das erzeugte Shaded JAR befindet sich in `target/` und enthält alle Abhängigke
 
 ### Anwendung starten
 ```cmd
-java -jar target\calendar-java-1.0.1-SNAPSHOT-shaded.jar
+java -jar target\calendar-java-1.0.3-shaded.jar
 ```
 
 Oder in der IDE: `org.example.Main` ausführen
@@ -135,7 +139,7 @@ Oder in der IDE: `org.example.Main` ausführen
 ## Git und GitHub
 
 Dieser Abschnitt beschreibt, wie Git eingerichtet und das Projekt auf GitHub veröffentlicht wird. Außerdem wird eine CI-Pipeline über GitHub Actions aktiviert.
-
+# Code Explanation (Beginner Friendly)
 ### 1) Git initialisieren und erste Commits
 ```cmd
 git init
@@ -176,10 +180,12 @@ calendar-java/
 ├── pom.xml                                 # Maven-Konfiguration
 ├── README.md                               # Projekt-Dokumentation
 ├── CHANGELOG.md                            # Versionshistorie
-├── CODE_EXPLANATION.md                     # Code-Erklärung für Anfänger
-├── FIX_SUMMARY.md                          # Bugfix-Dokumentation
-├── BIWEEKLY_MIGRATION.md                   # Migration ical4j → Biweekly
-├── PROJEKT_ERSTELLUNG.md                   # Diese Datei
+├── docs/
+│   ├── CODE_EXPLANATION.md                 # Code-Erklärung für Anfänger
+│   ├── FIX_SUMMARY.md                      # Bugfix-Dokumentation
+│   ├── BIWEEKLY_MIGRATION.md               # Migration ical4j → Biweekly
+│   ├── MANUAL_TEST_PLAN.md                 # Manueller Testplan
+│   └── PROJEKT_ERSTELLUNG.md               # Diese Datei
 ├── THIRD-PARTY-NOTICES.md                  # Lizenzen von Dependencies
 ├── build-jar.cmd                           # Windows Build-Skript
 ├── calendar.ics                            # Beispiel-ICS-Datei
@@ -206,79 +212,86 @@ calendar-java/
             └── CalendarUiPersistenceTest.java  # UI-Persistenz Tests
 ```
 
-## Verwendete Technologien
+This document explains the main parts of the Calendar Java project and how data flows through the app. It's written for starters who want a quick mental model without diving into every implementation detail.
 
-### Core
-- **Java 21**: Moderne Java-Features (Records, Pattern Matching, etc.)
-- **Maven**: Dependency Management und Build-Automatisierung
+## Big Picture
+- UI: JavaFX + CalendarFX provide the window, buttons, and calendar view.
+- Data: Events (CalendarEntry) are stored in an ICS file (ICS-only design).
+- Import/Export: ICS via Biweekly, plus basic VCS support. ical4j remains as a dependency for compatibility but ICS read/write in this app is implemented with Biweekly.
+- Config: A `config.properties` file controls the ICS file path and UI options.
 
-### UI
-- **JavaFX 22**: Desktop-UI-Framework
-- **CalendarFX 12**: Professionelle Kalender-Komponente (Apache-2.0)
-- **FXML**: Deklarative UI-Definition
+The app starts via a small launcher (org.example.Main) that ensures JavaFX can be started reliably from the shaded JAR.
 
-### Daten
-- **Biweekly 0.6.8**: ICS Import/Export in der App (RFC 5545)
-- **ical4j 4.0.2**: Als Dependency beibehalten (Kompatibilität)
-- **Custom VCS Parser**: Minimale vCalendar 1.0 Unterstützung
+## Key Classes and Files
 
-### Testing
-- **JUnit Jupiter 5.10.2**: Unit-Testing-Framework
+- org.example.Main
+  - A tiny launcher class that invokes JavaFX's Application launch indirectly. This avoids common JavaFX startup errors when running a JAR. It launches the JavaFX app (`CalendarFxmlApp` or `CalendarProjektApp`).
 
-### Packaging
-- **Maven Shade Plugin**: Fat-JAR mit allen Dependencies
+- CalendarFxmlApp (JavaFX Application)
+  - Loads the FXML layout (`calendar_view.fxml`) and thus activates the controller `CalendarProjektController`.
 
-## Konfiguration
+- CalendarProjektApp (JavaFX Application)
+  - A programmatic JavaFX application that builds the UI in code (toolbar + CalendarFX view). It shows how to:
+    - Load entries from the configured ICS file.
+    - Create new events.
+    - Import/export ICS/VCS files.
+    - Open a small settings dialog to choose the ICS path and toggle dark mode.
+  - The toolbar is organized with action buttons on the left (Settings, New Event, Import, Export) and control buttons on the right (Status indicator, Exit and Save).
+  - A flexible spacer ensures the status label and exit button always appear on the right edge.
+  - The project also contains the FXML-based UI (CalendarProjektController + calendar_view.fxml). You can use either approach.
 
-Die Anwendung verwendet `config.properties`:
+- CalendarProjektController (FXML Controller)
+  - Wires the buttons defined in `src/main/resources/calendar_view.fxml` to the application logic.
+  - Connects UI actions (new, import, export, settings) to logic and updates the CalendarFX view.
 
-```properties
-# Pfad zur ICS-Datei
-ics.path=calendar.ics
+- CalendarEntry (domain model)
+  - Represents a calendar event: id (optional), title, description, start/end times, optional reminder minutes, and category.
 
-# Dark Mode aktivieren
-ui.darkMode=false
-```
+- IcsUtil (import/export helper)
+  - ICS: Uses Biweekly to parse and generate `.ics` files.
+  - VCS: Contains a minimal reader/writer for vCalendar 1.0 (`.vcs`).
+  - Maps categories and reminders (VALARM) to/from `CalendarEntry` when possible.
 
-Die Datei wird in folgender Reihenfolge gesucht:
-1. Aktuelles Arbeitsverzeichnis
-2. Classpath (Standard-Fallback)
+- ConfigUtil (configuration)
+  - Reads/writes user settings, with preference for an external `config.properties` in the working directory (falls back to the classpath default if missing).
+  - Keys: `ics.path=calendar.ics`, `ui.darkMode=false`.
 
-## Features
+## Data Flow
+1. Startup
+   - `org.example.Main` calls `Application.launch` for either `CalendarFxmlApp` (FXML) or `CalendarProjektApp` (programmatic UI).
 
-### Implementiert
-- ✅ ICS-Import/Export (Biweekly)
-- ✅ VCS-Import/Export (custom)
-- ✅ CalendarFX UI Integration
-- ✅ Deutsche Lokalisierung
-- ✅ Dark Mode
-- ✅ Automatisches Speichern (Auto-Save Pipeline)
-- ✅ Status-Anzeige
-- ✅ Einstellungs-Dialog
-- ✅ Termin-Erstellung per Dialog
-- ✅ Termin-Erstellung per UI-Klick
-- ✅ Drag & Drop Termine
-- ✅ Erinnerungen (VALARM – einfache Hinweise)
-- ✅ Info-Dialog mit Bibliotheks-Credits
+2. Loading Data (ICS-only)
+   - `IcsUtil.importIcs` reads from the configured path (`ConfigUtil.getIcsPath()`), producing `List<CalendarEntry>`.
+   - The resulting entries are shown in the CalendarFX view.
 
-### Zukünftige Erweiterungen
-- ⏳ Wiederkehrende Termine (RRULE)
-- ⏳ Kategorien/Tags (erweiterte Funktionen)
-- ⏳ Mehrere Kalender-Quellen
-- ⏳ Suche/Filter
-- ⏳ Kalender-Freigabe
+3. Creating/Editing
+   - The UI shows a dialog to create a new event (title, dates).
+   - Changes done in the CalendarFX UI are auto-saved to the ICS file.
+   - A status indicator on the right side of the toolbar shows the save state and entry count.
 
-## Bekannte Einschränkungen
-- Keine Datenbank-Persistenz (nur ICS)
-- Begrenzte RRULE-Unterstützung
-- VCS-Import: nur grundlegende Felder
-- CalendarFX ist Open Source unter Apache-2.0; beim Redistributieren Lizenzhinweise beilegen (siehe THIRD-PARTY-NOTICES.md)
+4. Import/Export
+   - Import: `IcsUtil.importAuto` detects `.vcs` vs `.ics` and returns entries.
+   - Export: `IcsUtil.exportIcs` or `IcsUtil.exportVcs` writes a list of entries to a file of your choice.
 
-## Support und Kontakt
-**Autor**: Florian Knittel
+5. Configuration
+   - `ConfigUtil` prefers an external `config.properties` in the working dir for user changes.
+   - When the settings dialog is confirmed, `ConfigUtil.save()` writes the file.
 
-Bei Fragen oder Problemen:
-1. README.md und CODE_EXPLANATION.md lesen
-2. CHANGELOG.md für bekannte Issues prüfen
-3. FIX_SUMMARY.md für Bugfix-Details ansehen
-4. BIWEEKLY_MIGRATION.md für Migrationsdetails
+## Where to Start Reading the Code
+- To understand startup and UI flow: open `org/example/Main.java` then `CalendarFxmlApp.java` and `CalendarProjektController.java`.
+- To understand the alternative programmatic UI: open `CalendarProjektApp.java`.
+- To understand ICS/VCS import/export: open `IcsUtil.java` and the unit test `src/test/java/IcsUtilTest.java`.
+
+## Tips for Beginners
+- Search for TODO comments and method-level Javadoc to find extension points.
+- Start by running `mvn clean package` and then `java -jar target/<shaded-jar>.jar`.
+- Try importing a small `.ics` file to see entries appear.
+
+## Glossary
+- JavaFX: Java's UI framework for desktop apps.
+- CalendarFX: A UI library for calendar views and interactions.
+- ICS (iCalendar): A standard calendar file format used by many tools.
+- VCS (vCalendar): An older calendar file format similar to ICS.
+
+---
+See also: BIWEEKLY_MIGRATION.md for details about the migration from ical4j to Biweekly.

@@ -1,13 +1,14 @@
 # Calendar Java (JavaFX + CalendarFX)
+Version: 1.0.3 — Stand: 2025-11-13
 
 A simple desktop calendar application built with JavaFX and CalendarFX. It imports and exports events in iCalendar (.ics) and vCalendar (.vcs) formats. Persistence is ICS-only.
 
 The UI is localized in German and provides buttons for creating events, importing/exporting, choosing the ICS file path, and toggling dark mode.
 
-For a beginner-friendly walkthrough of the codebase, see CODE_EXPLANATION.md.
-For an end-to-end creation story and build steps in German, see PROJEKT_ERSTELLUNG.md.
-For details about the migration from ical4j to Biweekly, see BIWEEKLY_MIGRATION.md.
-For the auto-save bugfix summary, see FIX_SUMMARY.md.
+For a beginner-friendly walkthrough of the codebase, see docs/CODE_EXPLANATION.md.
+For an end-to-end creation story and build steps in German, see docs/PROJEKT_ERSTELLUNG.md.
+For details about the migration from ical4j to Biweekly, see docs/BIWEEKLY_MIGRATION.md.
+For the auto-save bugfix summary, see docs/FIX_SUMMARY.md.
 
 
 ## Tech Stack
@@ -51,7 +52,7 @@ This compiles sources, runs unit tests, and builds a fat JAR in `target/` using 
 Choose one of the following:
 
 - From the built shaded JAR (preferred if it works on your platform):
-  - Check `target/` for a shaded JAR (often named like `calendar-java-1.0-SNAPSHOT-shaded.jar`).
+  - Check `target/` for a shaded JAR (often named like `calendar-java-1.0.3-shaded.jar`).
   - Run it:
     ```
     java -jar target/<the-shaded-jar>.jar
@@ -96,11 +97,14 @@ Current tests cover ICS and VCS import/export functionality (`IcsUtilTest`).
 calendar-java/
 ├─ pom.xml                         # Maven build config (Java 21, JavaFX, CalendarFX, Shade, Surefire)
 ├─ README.md
-├─ BIWEEKLY_MIGRATION.md          # Notes for migration from ical4j to Biweekly
-├─ FIX_SUMMARY.md                 # Auto-save bugfix summary
-├─ PROJEKT_ERSTELLUNG.md          # Project creation story (German)
+├─ CHANGELOG.md
 ├─ THIRD-PARTY-NOTICES.md         # Dependencies and licenses
 ├─ LICENSE
+├─ docs/
+│  ├─ CODE_EXPLANATION.md          # Code walkthrough
+│  ├─ PROJEKT_ERSTELLUNG.md        # Project creation (German)
+│  ├─ BIWEEKLY_MIGRATION.md        # ical4j → Biweekly migration notes
+│  ├─ FIX_SUMMARY.md               # Auto-save bugfix summary
 ├─ calendar.ics                    # Example ICS file
 ├─ src/
 │  ├─ main/

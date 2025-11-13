@@ -1,10 +1,25 @@
 # Changelog
+Version: 1.0.3 — Stand: 2025-11-13
 
 All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
 ## [Unreleased]
+
+## [1.0.3] - 2025-11-13
+
+### Changed
+- Standardized and professionalized code comments across the codebase (model, utilities, controller, launchers)
+  - Rewrote narrative/beginner-oriented comments to concise, technical Javadoc
+  - Improved clarity and consistency of method/field documentation
+- UI text polish
+  - Removed emojis and decorative separators from information dialogs and status texts
+  - Ensured author credits appear consistently and professionally phrased
+  - Updated info dialogs to show version 1.0.3
+
+### Notes
+- No functional changes; this release focuses on documentation/comment quality and UI text consistency.
 
 ## [1.0.2] - 2025-10-16
 
@@ -29,11 +44,19 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - PROJEKT_ERSTELLUNG.md
   - Consolidated links to all docs, updated build/run sections with Windows cmd examples
   - Added CI (GitHub Actions) overview and set project header to 1.0.1 for historical accuracy
+  - Updated author credits to: Jan Erdmann, Kerim Talha Morca, Florian Alexander Knittel
 - THIRD-PARTY-NOTICES.md
   - Clarified CalendarFX licensing (Apache-2.0), added concise license guidance, and included a version history + Maven command to regenerate notices
 
+### UI
+- Updated Info dialogs in both UI variants to show version 1.0.2 and authors:
+  - Jan Erdmann
+  - Kerim Talha Morca
+  - Florian Alexander Knittel
+- Adjusted footer Info tooltip text to mention “Autoren” (plural) instead of singular
+
 ### Notes
-- No functional code changes in this release; this is a documentation alignment/polish release to keep all Markdown guides consistent with the current implementation (Biweekly-based ICS, auto-save pipeline, UI layout).
+- No functional code changes in this release; this is a documentation and credit-alignment release.
 
 ## [1.0.1] - 2025-10-09
 
@@ -73,7 +96,6 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
   - Eliminated database dependencies and configuration
   - Removed unused database mode from config.properties
   - Simplified codebase by focusing on single file-based persistence mechanism
-- **Unused Code Cleanup**: Removed obsolete classes and methods that were no longer used after database removal
 
 ### Files Modified
 - `src/main/java/CalendarProjektApp.java`:

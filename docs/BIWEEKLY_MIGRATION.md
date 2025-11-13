@@ -1,4 +1,5 @@
 # Migration to Biweekly Library
+Version: 1.0.3 — Stand: 2025-11-13
 
 ## Summary
 This project migrated ICS handling from ical4j to the Biweekly library while keeping ical4j as a dependency for compatibility during transition. The application code now uses Biweekly for reading and writing .ics files.
